@@ -10,7 +10,7 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <run_depends>rtt_lwr_example</run_depends>
+  <run_depend>rtt_lwr_example</run_depend>
   
   <export>
   </export>
