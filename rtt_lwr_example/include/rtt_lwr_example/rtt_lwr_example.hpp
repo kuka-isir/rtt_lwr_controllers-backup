@@ -10,7 +10,7 @@ namespace lwr{
 class RTTLWRExample : public RTTLWRAbstract{
 public:
     RTTLWRExample(const std::string& name);
-    virtual ~RTTLWRExample();
+    virtual ~RTTLWRExample(){};
     void updateHook();
     bool configureHook();
 };
