@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 2.8.3)
 project(rtt_lwr_example)
 
 find_package(catkin REQUIRED COMPONENTS 
-    rtt_ros 
+    rtt_ros
+    rtt_rosclock
+    rtt_roscomm
+    rtt_rosparam
     kuka_lwr_fri 
     diagnostic_msgs 
     geometry_msgs 
@@ -11,7 +14,10 @@ find_package(catkin REQUIRED COMPONENTS
     lwr_fri
     rtt_lwr_abstract
     cmake_modules
+    conman
 )
+
+set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONMAN)
 
 find_package(Eigen REQUIRED)
 find_package(orocos_kdl REQUIRED)
@@ -32,6 +38,9 @@ include_directories(
     ${USE_OROCOS_INCLUDE_DIRS}
 )
 
+
+
+
 orocos_component(${PROJECT_NAME} src/${PROJECT_NAME}.cpp)
 set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
 
@@ -47,13 +56,6 @@ target_link_libraries(${PROJECT_NAME}
     ${kdl_conversions_LIBRARIES}
 )
 
-message(WARNING "catkin_INCLUDE_DIRS
-${catkin_INCLUDE_DIRS}")
-message(WARNING "USE_OROCOS_INCLUDE_DIRS
-${USE_OROCOS_INCLUDE_DIRS}")
-message(WARNING "catkin_LIBRARIES
-${catkin_LIBRARIES}")
-message(WARNING "USE_OROCOS_LIBRARIES
-${USE_OROCOS_LIBRARIES}")
+
 add_dependencies(${PROJECT_NAME} rtt_lwr_abstract)
 orocos_generate_package(INCLUDE_DIRS include)
