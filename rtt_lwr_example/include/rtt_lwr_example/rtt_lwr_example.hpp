@@ -13,6 +13,8 @@ public:
     virtual ~RTTLWRExample(){};
     void updateHook();
     bool configureHook();
+    double ks_;
+    int cnt_;
 };
 }
 ORO_CREATE_COMPONENT(lwr::RTTLWRExample)
