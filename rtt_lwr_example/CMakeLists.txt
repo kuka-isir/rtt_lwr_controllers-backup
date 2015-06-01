@@ -11,10 +11,12 @@ find_package(catkin REQUIRED COMPONENTS
     geometry_msgs 
     std_msgs 
     kdl_conversions
+    eigen_conversions
     lwr_fri
     rtt_lwr_abstract
     cmake_modules
     conman
+    rtt_ros_kdl_tools
 )
 
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONMAN)
@@ -39,7 +41,10 @@ include_directories(
 )
 
 
-
+if(${OROCOS_TARGET} STREQUAL "xenomai" )
+  find_package(Xenomai REQUIRED)
+  set_property(DIRECTORY ${PROJECT_SOURCE_DIR} APPEND PROPERTY COMPILE_DEFINITIONS HAVE_RTNET XENOMAI __XENO__)
+endif()
 
 orocos_component(${PROJECT_NAME} src/${PROJECT_NAME}.cpp)
 set_property(TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_DEFINITIONS RTT_COMPONENT)
