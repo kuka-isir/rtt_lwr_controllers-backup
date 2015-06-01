@@ -15,6 +15,12 @@ public:
     bool configureHook();
     double ks_;
     int cnt_;
+    bool initialized_;
+    void setAmplitude(double amplitude);
+    std::vector<double> kp,kd;
+    void setGains(double p,double d);
+    bool torque_only;
+    
 };
 }
 ORO_CREATE_COMPONENT(lwr::RTTLWRExample)
