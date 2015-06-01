@@ -1,0 +1,20 @@
+// Start LWR SIMULATION
+import("rtt_ros")
+
+ros.import("rtt_dynamics_analysis")
+loadComponent("dyn","DynamicsAnalysis")
+setActivity("dyn",0.001,10,ORO_SCHED_RT)
+connectPeers("dyn","lwr_sim")
+dyn.robot_name = "lwr_sim"
+dyn.root_link = lwr_sim.root_link
+dyn.tip_link = lwr_sim.tip_link
+
+connect(dyn.robot_name+".JointPosition","dyn.JointPosition",ConnPolicy())
+connect(dyn.robot_name+".JointVelocity","dyn.JointVelocity",ConnPolicy())
+connect(dyn.robot_name+".JointTorqueCommand","dyn.JointTorqueCommand",ConnPolicy())
+
+lwr_sim.setJointImpedanceMode()
+
+dyn.configure()
+dyn.start()
+

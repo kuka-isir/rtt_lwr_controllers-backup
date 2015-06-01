@@ -1,0 +1,54 @@
+// Start LWR SIMULATION
+import("rtt_ros")
+ros.import("rtt_rospack")
+runScript(ros.find("rtt_lwr_sim")+"/scripts/lwr_sim_conman.ops")
+
+
+ros.import("rtt_dynamics_analysis")
+loadComponent("dyn","DynamicsAnalysis")
+setActivity("dyn",0.001,10,ORO_SCHED_RT)
+connectPeers("dyn","lwr_sim")
+dyn.robot_name = "lwr_sim"
+dyn.root_link = lwr_sim.root_link
+dyn.tip_link = lwr_sim.tip_link
+
+connect(dyn.robot_name+".JointPosition","dyn.JointPosition",ConnPolicy())
+connect(dyn.robot_name+".JointVelocity","dyn.JointVelocity",ConnPolicy())
+connect(dyn.robot_name+".JointTorqueCommand","dyn.JointTorqueCommand",ConnPolicy())
+
+
+dyn.configure()
+
+loadComponent("scheme","conman::Scheme")
+setActivity("scheme",0.001,10,ORO_SCHED_RT)
+scheme.loadService("conman_ros")
+
+connectPeers("scheme","lwr_sim")
+connectPeers("scheme","dyn")
+
+//scheme.addBlock("gazebo")
+scheme.addBlock("lwr_sim")
+scheme.addBlock("dyn")
+
+scheme.latchConnections("lwr_sim","dyn",true);
+
+
+scheme.addGroup("robots")
+scheme.addGroup("controllers")
+
+scheme.addToGroup("lwr_sim","robots")
+//scheme.addToGroup("gazebo","robots")
+
+scheme.addToGroup("dyn","controllers")
+
+scheme.configure()
+
+
+scheme.enableBlock("robots",true)
+
+scheme.enableBlock("controllers",true)
+
+scheme.start()
+
+
+
