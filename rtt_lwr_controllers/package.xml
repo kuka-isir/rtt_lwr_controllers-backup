@@ -11,6 +11,8 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <run_depend>rtt_lwr_example</run_depend>
+  <run_depend>rtt_lwr_cart_example</run_depend>
+  <run_depend>rtt_dynamics_analysis</run_depend>
   
   <export>
   </export>
