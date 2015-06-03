@@ -6,7 +6,8 @@ loadComponent("mycontroller","lwr::RTTLWRExample")
 setActivity("mycontroller",0.001,10,ORO_SCHED_RT)
 connectPeers("mycontroller","lwr_sim")
 mycontroller.robot_name = "lwr_sim"
-
+mycontroller.root_link = "link_0"
+mycontroller.tip_link = "link_7"
 mycontroller.configure()
-mycontroller.start()
+
 
