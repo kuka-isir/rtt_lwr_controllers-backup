@@ -82,7 +82,7 @@ bool DynamicsAnalysis::configureHook()
     
     KDL::Vector gravity_vector(0.,0.,-9.81289);
     
-    if(!rtt_ros_kdl_tools::initChainFromROSParamURDF(this,robot_name,root_link,tip_link,tree,chain))
+    if(!rtt_ros_kdl_tools::initChainFromROSParamURDF(this,root_link,tip_link,tree,chain,robot_name+"/robot_description"))
     {
         RTT::log(RTT::Error) << "Error while loading the URDF with params : "<<robot_name<<" "<<root_link<<" "<<tip_link <<RTT::endlog();
         return false;
