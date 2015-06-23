@@ -16,5 +16,4 @@ connect(dyn.robot_name+".JointTorqueCommand","dyn.JointTorqueCommand",ConnPolicy
 lwr_sim.setJointImpedanceMode()
 
 dyn.configure()
-dyn.start()
 
