@@ -20,6 +20,7 @@ public:
     std::vector<double> kp,kd;
     void setGains(double p,double d);
     bool torque_only;
+    double amplitude_;
     
 };
 }

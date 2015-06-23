@@ -7,13 +7,15 @@
 lwr::RTTLWRExample::RTTLWRExample(const std::string& name): 
 RTTLWRAbstract(name),
 cnt_(0),
-ks_(0.1),
+ks_(1.0),
 initialized_(false),
 kp(LBR_MNJ,0.1),
 kd(LBR_MNJ,0.001),
+amplitude_(10.0*M_PI/180.),
 torque_only(false)
 {
     this->addAttribute("ks",ks_);
+    this->addAttribute("amplitude",amplitude_);
     this->addProperty("torque_only",torque_only);
     this->addAttribute("initialized",initialized_);
     this->addOperation("setAmplitude",&lwr::RTTLWRExample::setAmplitude,this,RTT::OwnThread);
@@ -23,7 +25,7 @@ torque_only(false)
 bool lwr::RTTLWRExample::configureHook()
 {
     bool configure = lwr::RTTLWRAbstract::configureHook();
-    initializeCommand();
+    //initializeCommand();
     setJointImpedanceControlMode();
     return configure;
 }
@@ -37,20 +39,20 @@ void lwr::RTTLWRExample::setGains(double p, double d)
 
 void lwr::RTTLWRExample::setAmplitude(double amplitude)
 {
-    ks_ = amplitude;
+    amplitude_ = amplitude;
 }
 
 void lwr::RTTLWRExample::updateHook()
 {
     
-    if(isCommandMode()){
+    if(isCommandMode() && isPowerOn()){
         if((!initialized_) && getJointPosition(jnt_pos))
             {
                 RTT::log(RTT::Info) << " Joint Position Initialized ! "<<jnt_pos.transpose()<<RTT::endlog();     
                 initialized_ = true;
             }
             
-        if(initialized_ && isPowerOn())
+        if(initialized_)
         {
             if(torque_only){
                 getJointVelocity(jnt_vel);
@@ -70,14 +72,14 @@ void lwr::RTTLWRExample::updateHook()
             }
             for(unsigned i=0;i<n_joints;++i)
             {
-                this->jnt_pos_cmd[i] = /*jnt_pos[i] +*/ 30*3.14/180.0*sin(cnt_*getPeriod()*ks_);//*double(i+1));
+                this->jnt_pos_cmd[i] = jnt_pos[i] + amplitude_*sin((double)cnt_*(double)getPeriod()*ks_);//*double(i+1));
                 
                 if(torque_only){
 
                     this->jnt_trq_cmd[i] = kp[i]*(jnt_pos_cmd[i] - jnt_pos[i]) - kd[i]*jnt_vel[i];
                 }
             }
-            //RTT::log(RTT::Info) << "jnt_trq_cmd="<<jnt_trq_cmd.transpose()<<RTT::endlog();
+            //RTT::log(RTT::Info) << "jnt_trq_cmd="<<jnt_pos_cmd.transpose()<<RTT::endlog();
             //RTT::log(RTT::Info) << "jnt_pos_cur="<<jnt_pos.transpose()<<RTT::endlog();
             
             if(torque_only)
@@ -94,4 +96,5 @@ void lwr::RTTLWRExample::updateHook()
     }else{
         //RTT::log(RTT::Debug) << "isCommandMode()="<<isCommandMode()<<" isPowerOn()="<<isPowerOn()<<RTT::endlog();
     }
+    this->trigger();
 }
