@@ -1,12 +1,10 @@
-// Start LWR SIMULATION
+// Start LWR 
 import("rtt_ros")
 ros.import("rtt_rospack")
 runScript(ros.find("lwr_fri")+"/runfridiag.ops")
 
-
 ros.import("rtt_lwr_example")
 loadComponent("ex","lwr::RTTLWRExample")
-setActivity("ex",0.001,10,ORO_SCHED_RT)
+setActivity("ex",0,10,ORO_SCHED_RT)
 connectPeers("ex","lwr")
 ex.configure()
-ex.start()
