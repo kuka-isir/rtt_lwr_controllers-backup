@@ -73,16 +73,16 @@ bool DynamicsAnalysis::configureHook()
         return false;
     }
 
-    rosparam->getPrivate("robot_name");
-    rosparam->getPrivate("root_link");
-    rosparam->getPrivate("tip_link");
+    rosparam->getRelative("robot_name");
+    rosparam->getRelative("root_link");
+    rosparam->getRelative("tip_link");
 
     RTT::log(RTT::Info)<<"root_link : "<<root_link<<RTT::endlog();
     RTT::log(RTT::Info)<<"tip_link : "<<tip_link<<RTT::endlog();
     
     KDL::Vector gravity_vector(0.,0.,-9.81289);
     
-    if(!rtt_ros_kdl_tools::initChainFromROSParamURDF(this,root_link,tip_link,tree,chain,robot_name+"/robot_description"))
+    if(!rtt_ros_kdl_tools::initChainFromROSParamURDF(this,root_link,tip_link,tree,chain,"robot_description"))
     {
         RTT::log(RTT::Error) << "Error while loading the URDF with params : "<<robot_name<<" "<<root_link<<" "<<tip_link <<RTT::endlog();
         return false;
@@ -145,13 +145,13 @@ bool DynamicsAnalysis::configureHook()
     port_JSDynParam.setDataSample(js_dyn_param);
     port_JS.setDataSample(js);
     
-    port_JS.createStream(rtt_roscomm::topic("/"+this->getName()+"/js"));
-    port_JSDyn.createStream(rtt_roscomm::topic("/"+this->getName()+"/js_dynamics"));
-    port_JSDynParam.createStream(rtt_roscomm::topic("/"+this->getName()+"/js_dynamics_params"));
+    port_JS.createStream(rtt_roscomm::topic("~"+this->getName()+"/js"));
+    port_JSDyn.createStream(rtt_roscomm::topic("~"+this->getName()+"/js_dynamics"));
+    port_JSDynParam.createStream(rtt_roscomm::topic("~"+this->getName()+"/js_dynamics_params"));
     
     amplitude = 60*M_PI/180.0;
     omega = 0.35;
-    phi = 0.0;
+    phi = M_PI/2.0;
     
     kp = 500.0;
     kd = 24.0;
@@ -165,8 +165,9 @@ bool DynamicsAnalysis::configureHook()
 DynamicsAnalysis::DynamicsAnalysis(const std::string& name): 
 TaskContext(name),
 cnt(0),
-root_link("lwr/link_0"),
-tip_link("lwr/link_7"),
+throttle(0),
+root_link("link_0"),
+tip_link("link_7"),
 use_robot_description(true)
 {
     this->ports()->addPort("JointStateDynamics",port_JSDyn).doc("Full KDL Dynamics");
@@ -252,5 +253,10 @@ void DynamicsAnalysis::updateHook()
         port_JS.write(js);
         port_JointTorqueCommand.write(jnt_trq_kdl.data);
         
+    }else{
+        if(throttle++ % (unsigned int)(1./(double)getPeriod()) == 0)
+        {
+                RTT::log(RTT::Debug)<< "No Data "<<RTT::endlog();
+        }
     }
 }

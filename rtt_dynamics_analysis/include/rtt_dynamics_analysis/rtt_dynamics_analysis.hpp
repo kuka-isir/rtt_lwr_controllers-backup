@@ -76,7 +76,7 @@ public:
                     jnt_pos_cmd;
                     
     double amplitude,omega,phi,kp,kd,kg;
-    unsigned int cnt;
+    unsigned int cnt,throttle;
     ros::Time now;
     
     
