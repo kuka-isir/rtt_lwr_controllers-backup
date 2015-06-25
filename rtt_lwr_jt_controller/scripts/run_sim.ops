@@ -1,0 +1,7 @@
+import("rtt_ros")
+ros.import("rtt_lwr_jt_controller")
+loadComponent("example","lwr::JtATIController")
+setActivity("example",0.001,LowestPriority,ORO_SCHED_RT)
+connectPeers("example","lwr_sim")
+example.robot_name = "lwr_sim"
+example.configure()
