@@ -5,7 +5,7 @@ namespace lwr{
 JtATIController::JtATIController(const std::string& name):
 use_kdl_gravity(false),
 use_kdl(true),
-add_damping(false),
+add_damping(true),
 RTTLWRAbstract(name)
 {
     this->addPort("FTData",port_ftdata).doc("");
