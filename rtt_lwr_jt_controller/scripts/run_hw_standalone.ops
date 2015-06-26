@@ -3,8 +3,12 @@ import("rtt_ros")
 ros.import("rtt_rospack")
 runScript(ros.find("rtt_ati_sensor") + "/scripts/ft_sensor.ops")
 
+ft_sensor.setBias()
+
 runScript(ros.find("lwr_fri")+"/runfridiag.ops")
 
 // Start rtt_lwr_jt_controller
 runScript(ros.find("rtt_lwr_jt_controller")+"/scripts/run_hw.ops")
 jt.start()
+
+runScript(ros.find("lwr_state_publisher")+"/run_hw.ops")
