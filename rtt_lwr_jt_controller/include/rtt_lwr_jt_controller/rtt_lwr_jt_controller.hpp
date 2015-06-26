@@ -22,7 +22,8 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <algorithm>
 #include <eigen_conversions/eigen_msg.h>
-#include <tf/transform_listener.h>
+#include <kdl_conversions/kdl_msg.h>
+
 
 namespace lwr{
   class JtATIController : public RTTLWRAbstract{
@@ -37,9 +38,14 @@ namespace lwr{
       Eigen::Matrix<double,6,1> wrench;
       KDL::Jacobian J_kdl;
       std::string ati_frame;
-      tf::TransformListener tf;
       KDL::JntArray jnt_acc_kdl;
       KDL::Wrench wrench_kdl;
+      KDL::JntSpaceInertiaMatrix mass_kdl;
+      bool use_kdl;
+      bool use_kdl_gravity;
+      bool add_damping;
+      Eigen::VectorXd kg;
+      Eigen::VectorXd kd;
   };
 }
 ORO_CREATE_COMPONENT(lwr::JtATIController)
