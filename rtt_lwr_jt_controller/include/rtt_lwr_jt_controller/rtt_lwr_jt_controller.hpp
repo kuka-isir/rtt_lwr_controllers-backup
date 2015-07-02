@@ -44,6 +44,7 @@ namespace lwr{
       bool use_kdl;
       bool use_kdl_gravity;
       bool add_damping;
+      bool compensate_coriolis;
       Eigen::VectorXd kg;
       Eigen::VectorXd kd;
   };

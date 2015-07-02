@@ -6,12 +6,14 @@ JtATIController::JtATIController(const std::string& name):
 use_kdl_gravity(false),
 use_kdl(true),
 add_damping(true),
+compensate_coriolis(false),
 RTTLWRAbstract(name)
 {
     this->addPort("FTData",port_ftdata).doc("");
     this->addProperty("use_kdl",use_kdl).doc("");
     this->addProperty("use_kdl_gravity",use_kdl_gravity).doc("");
     this->addProperty("add_damping",add_damping).doc("");
+    this->addProperty("compensate_coriolis",compensate_coriolis).doc("");
 }
 
 bool JtATIController::configureHook()
@@ -98,12 +100,18 @@ void JtATIController::updateHook()
     {
         getGravityTorque(jnt_grav);
         id_dyn_solver->JntToGravity(jnt_pos_kdl,gravity_kdl);
-        jnt_trq_cmd = jnt_trq_cmd + kg.asDiagonal() * gravity_kdl.data - jnt_grav;
+        jnt_trq_cmd += kg.asDiagonal() * gravity_kdl.data - jnt_grav;
+    }
+    
+    if(compensate_coriolis)
+    {
+        id_dyn_solver->JntToCoriolis(jnt_pos_kdl,jnt_vel_kdl,coriolis_kdl);
+        jnt_trq_cmd -= coriolis_kdl.data.asDiagonal()*jnt_vel;
     }
     
     if(add_damping)
     {
-        jnt_trq_cmd = jnt_trq_cmd - kd.asDiagonal() * jnt_vel;
+        jnt_trq_cmd -= kd.asDiagonal() * jnt_vel;
     }
     
     sendJointTorque(jnt_trq_cmd);
