@@ -33,6 +33,7 @@ namespace lwr{
       void updateHook();
       bool configureHook();
       RTT::InputPort<geometry_msgs::WrenchStamped> port_ftdata;
+      void setDamping(double d);
     protected:
       geometry_msgs::WrenchStamped wrench_msg;
       Eigen::Matrix<double,6,1> wrench;
