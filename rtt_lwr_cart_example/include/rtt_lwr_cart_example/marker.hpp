@@ -12,12 +12,15 @@
 #include <math.h>
 #include <boost/atomic.hpp>
 
+namespace markers_tests
+{
 boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 interactive_markers::MenuHandler menu_handler;
 using namespace visualization_msgs;
 
 geometry_msgs::Pose marker_pose;
 boost::atomic<bool> writing,marker_initialized;
+std::string link_base_;
 // %Tag(Box)%
 Marker makeBox( InteractiveMarker &msg )
 {
@@ -59,11 +62,11 @@ void frameCallback(const ros::TimerEvent&)
 
   t.setOrigin(tf::Vector3(0.0, 0.0, sin(float(counter)/140.0) * 2.0));
   t.setRotation(tf::Quaternion(0.0, 0.0, 0.0, 1.0));
-  br.sendTransform(tf::StampedTransform(t, time, "lwr_sim/link_0", "moving_frame"));
+  br.sendTransform(tf::StampedTransform(t, time, link_base_, "moving_frame"));
 
   t.setOrigin(tf::Vector3(0.0, 0.0, 0.0));
   t.setRotation(tf::createQuaternionFromRPY(0.0, float(counter)/140.0, 0.0));
-  br.sendTransform(tf::StampedTransform(t, time, "lwr_sim/link_0", "rotating_frame"));
+  br.sendTransform(tf::StampedTransform(t, time, link_base_, "rotating_frame"));
 
   counter++;
 }
@@ -128,7 +131,7 @@ void processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPt
 void make6DofMarker( bool fixed, unsigned int interaction_mode, const tf::Vector3& position, bool show_6dof )
 {
   InteractiveMarker int_marker;
-  int_marker.header.frame_id = "lwr_sim/link_0";
+  int_marker.header.frame_id = link_base_;
   tf::pointTFToMsg(position, int_marker.pose.position);
   int_marker.scale = 1;
 
@@ -198,5 +201,6 @@ void make6DofMarker( bool fixed, unsigned int interaction_mode, const tf::Vector
   server->setCallback(int_marker.name, &processFeedback);
   if (interaction_mode != visualization_msgs::InteractiveMarkerControl::NONE)
     menu_handler.apply( *server, int_marker.name );
+}
 }
 #endif
