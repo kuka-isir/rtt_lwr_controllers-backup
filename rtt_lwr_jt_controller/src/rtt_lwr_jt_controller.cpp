@@ -14,6 +14,13 @@ RTTLWRAbstract(name)
     this->addProperty("use_kdl_gravity",use_kdl_gravity).doc("");
     this->addProperty("add_damping",add_damping).doc("");
     this->addProperty("compensate_coriolis",compensate_coriolis).doc("");
+    this->addOperation("setDamping",&JtATIController::setDamping,this).doc("");
+}
+
+void JtATIController::setDamping(double d)
+{
+    if(d)
+	kd.setConstant(d);      
 }
 
 bool JtATIController::configureHook()
@@ -84,7 +91,7 @@ void JtATIController::updateHook()
         
         
         // Get Jacobian with KDL
-        jnt_to_jac_solver->JntToJac(jnt_pos_kdl,J_kdl,kdl_chain.getNrOfSegments()-1);
+        jnt_to_jac_solver->JntToJac(jnt_pos_kdl,J_kdl,kdl_chain.getNrOfSegments());
         
         RTT::log(RTT::Debug) << "J_kdl : \n"<<J_kdl.data<<RTT::endlog();
         
