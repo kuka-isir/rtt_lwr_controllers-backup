@@ -1,6 +1,7 @@
 // Start LWR SIMULATION
+// import("rtt_rospack");runScript(ros.find("rtt_lwr_cart_example")+"/scripts/run_sim_standalone.ops");
 import("rtt_ros")
 ros.import("rtt_rospack")
-runScript(ros.find("rtt_lwr_sim")+"/scripts/lwr_sim.ops")
+runScript(ros.find("rtt_lwr_sim")+"/scripts/lwr_sim_standalone.ops")
 runScript(ros.find("rtt_lwr_cart_example")+"/scripts/run_sim.ops")
 mycontroller.start()

@@ -2,15 +2,18 @@
 // Author: Antoine Hoarau <hoarau.robotics@gmail.com>
 
 #include "rtt_lwr_cart_example/rtt_lwr_cart_example.hpp"
+#ifdef MARKERS
+using namespace markers_tests;
+#endif
 
 lwr::RTTLWRCartExample::RTTLWRCartExample(const std::string& name): 
 RTTLWRAbstract(name),
 cnt_(0),
 ks_(0.03),
-k_lin(40.0),
-k_ang(5.0),
-d_lin(0.0),
-d_ang(0.0)
+k_lin(1000.0),
+k_ang(10.0),
+d_lin(63.0),
+d_ang(.1)
 {
     this->addAttribute("ks",ks_);
     this->addAttribute("k_lin",k_lin);
@@ -26,10 +29,11 @@ bool lwr::RTTLWRCartExample::configureHook()
     setCartesianImpedanceControlMode();
             
     //initialise the command
-    cart_pos_cmd.position.x = 0.13;
-    cart_pos_cmd.position.y = -0.17;
-    cart_pos_cmd.position.z = 0.32;
+    cart_pos_cmd.position.x = 0.43;
+    cart_pos_cmd.position.y = -0.37;
+    cart_pos_cmd.position.z = 0.42;
 #ifdef MARKERS
+    link_base_ = this->root_link;
     writing = false;
     marker_initialized = false;
     ros::NodeHandle n;
@@ -45,7 +49,7 @@ bool lwr::RTTLWRCartExample::configureHook()
         
     cart_cmd_stamped.header.frame_id = this->root_link;   
     
-    port_PoseCommandStamped.createStream(rtt_roscomm::topic("/" + getName() +"/cart_cmd"));
+    port_PoseCommandStamped.createStream(rtt_roscomm::topic("~" + getName() +"/cart_cmd"));
     
     return configure;
 }
