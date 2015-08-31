@@ -25,23 +25,23 @@ void JtATIController::setDamping(double d)
 
 bool JtATIController::configureHook()
 {
-    if(!RTTLWRAbstract::configureHook()) return false;
+    if(!RTTLWRAbstract::init()) return false;
     setJointImpedanceControlMode();
     std::fill(jnt_imp_cmd.stiffness.begin(),jnt_imp_cmd.stiffness.end(),0.0);
     sendJointImpedance(jnt_imp_cmd);
-    J_kdl.resize(getNJoints());
-    jnt_acc_kdl.resize(getNJoints());
+    J_kdl.resize(getNrOfJoints());
+    jnt_acc_kdl.resize(getNrOfJoints());
     jnt_acc_kdl.data.setZero();
 
-    mass_kdl.resize(getNJoints());
+    mass_kdl.resize(getNrOfJoints());
     RTT::log(RTT::Warning) << "Last segment is : " << 
     kdl_chain.getSegment(kdl_chain.getNrOfSegments()-1).getName()<< RTT::endlog();
     
-    kg.resize(getNJoints());
+    kg.resize(getNrOfJoints());
     kg.setConstant(1.0);
     kg[1] = 1.1;
     
-    kd.resize(getNJoints());
+    kd.resize(getNrOfJoints());
     kd.setConstant(10.0);
     
     return true;
@@ -82,12 +82,13 @@ void JtATIController::updateHook()
     
     }else{
         // Get Jacobian with KRC
-        getJacobian(J);
+        getJacobian(J_tip_base);
         getCartesianPosition(cart_pos);
         tf::poseMsgToKDL(cart_pos,tool_in_base_frame);
-        J.changeBase(tool_in_base_frame.M);
+        tf::poseMsgToEigen(cart_pos,tool_in_base_frame_eigen);
+        J_tip_base.changeBase(tool_in_base_frame.M);
         
-        RTT::log(RTT::Debug) << "J : \n"<<J.data<<RTT::endlog();
+        RTT::log(RTT::Debug) << "J : \n"<<J_tip_base.data<<RTT::endlog();
         
         
         // Get Jacobian with KDL
@@ -96,8 +97,10 @@ void JtATIController::updateHook()
         RTT::log(RTT::Debug) << "J_kdl : \n"<<J_kdl.data<<RTT::endlog();
         
         tf::wrenchMsgToEigen(wrench_msg.wrench,wrench);
-
-        jnt_trq_cmd = J.data.transpose() * wrench;
+        //tf::wrenchMsgToKDL(wrench_msg.wrench,wrench_kdl);
+        wrench_kdl = tool_in_base_frame.M * wrench_kdl;
+        ///tf::wrenchKDLToEigen(wrench_kdl,wrench);
+        jnt_trq_cmd = J_tip_base.data.transpose() * wrench;
     
     }
     

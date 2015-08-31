@@ -24,7 +24,7 @@ torque_only(false)
 
 bool lwr::RTTLWRExample::configureHook()
 {
-    bool configure = lwr::RTTLWRAbstract::configureHook();
+    bool configure = lwr::RTTLWRAbstract::init();
     //initializeCommand();
     setJointImpedanceControlMode();
     return configure;
@@ -70,7 +70,7 @@ void lwr::RTTLWRExample::updateHook()
                             jnt_imp_cmd.stiffness[i] = 1000.0;
                         }
             }
-            for(unsigned i=0;i<n_joints;++i)
+            for(unsigned i=0;i<LBR_MNJ;++i)
             {
                 this->jnt_pos_cmd[i] = jnt_pos[i] + amplitude_*sin((double)cnt_*(double)getPeriod()*ks_);//*double(i+1));
                 
@@ -96,5 +96,5 @@ void lwr::RTTLWRExample::updateHook()
     }else{
         //RTT::log(RTT::Debug) << "isCommandMode()="<<isCommandMode()<<" isPowerOn()="<<isPowerOn()<<RTT::endlog();
     }
-    this->trigger();
+    //this->trigger();
 }

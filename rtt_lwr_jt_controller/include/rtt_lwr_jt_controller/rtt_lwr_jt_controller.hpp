@@ -48,6 +48,7 @@ namespace lwr{
       bool compensate_coriolis;
       Eigen::VectorXd kg;
       Eigen::VectorXd kd;
+      Eigen::Affine3d tool_in_base_frame_eigen;
   };
 }
 ORO_CREATE_COMPONENT(lwr::JtATIController)

@@ -25,7 +25,7 @@ d_ang(.1)
 
 bool lwr::RTTLWRCartExample::configureHook()
 {
-    bool configure = lwr::RTTLWRAbstract::configureHook();
+    bool configure = lwr::RTTLWRAbstract::init();
     setCartesianImpedanceControlMode();
             
     //initialise the command
