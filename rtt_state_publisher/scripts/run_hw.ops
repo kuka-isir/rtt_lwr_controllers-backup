@@ -1,0 +1,11 @@
+// runScript(ros.find("rtt_state_publisher")+"/scripts/run_hw.ops")
+state_pub.start()
+import("rtt_ros")
+ros.import("rtt_state_publisher")
+
+loadComponent("state_pub","RTTStatePublisher")
+setActivity("state_pub",0.01,LowestPriority,ORO_SCHED_OTHER)
+
+connectPeers("state_pub","lwr")
+
+state_pub.configure()

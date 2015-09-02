@@ -1,0 +1,10 @@
+// import("rtt_rospack");runScript(ros.find("rtt_state_publisher")+"/scripts/run_sim.ops");
+import("rtt_ros")
+ros.import("rtt_state_publisher")
+
+loadComponent("state_pub","RTTStatePublisher")
+setActivity("state_pub",0.02,LowestPriority,ORO_SCHED_OTHER)
+
+connectPeers("lwr_sim","state_pub")
+
+state_pub.configure()
