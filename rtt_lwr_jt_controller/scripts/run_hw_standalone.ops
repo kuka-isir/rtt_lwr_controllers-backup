@@ -11,4 +11,5 @@ runScript(ros.find("lwr_fri")+"/runfridiag.ops")
 runScript(ros.find("rtt_lwr_jt_controller")+"/scripts/run_hw.ops")
 jt.start()
 
-runScript(ros.find("lwr_state_publisher")+"/run_hw.ops")
+runScript(ros.find("rtt_state_publisher")+"/scripts/run_hw.ops")
+state_pub.start()
