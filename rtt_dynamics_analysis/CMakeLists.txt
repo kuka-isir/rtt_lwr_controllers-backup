@@ -1,21 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rtt_dynamics_analysis)
 
-find_package(catkin REQUIRED COMPONENTS 
+find_package(catkin REQUIRED COMPONENTS
     rtt_ros
     rtt_rosclock
     rtt_roscomm
     rtt_rosparam
-    diagnostic_msgs 
-    geometry_msgs 
-    std_msgs 
+    diagnostic_msgs
+    geometry_msgs
+    std_msgs
     kdl_conversions
     cmake_modules
-    conman
+#    conman
     rtt_ros_kdl_tools
 )
 
-set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONMAN)
+#set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONMAN)
 
 find_package(Eigen REQUIRED)
 find_package(orocos_kdl REQUIRED)
@@ -23,15 +23,15 @@ find_package(orocos_kdl REQUIRED)
 set(OROCOS_NO_AUTO_LINKING TRUE)
 
 catkin_package(
-   DEPENDS eigen rtt 
+   DEPENDS eigen rtt
    CATKIN_DEPENDS rtt_ros diagnostic_msgs geometry_msgs std_msgs
    )
-   
+
 
 include_directories(
-    include 
-    ${catkin_INCLUDE_DIRS} 
-    ${Eigen_INCLUDE_DIRS} 
+    include
+    ${catkin_INCLUDE_DIRS}
+    ${Eigen_INCLUDE_DIRS}
     ${orocos_kdl_INCLUDE_DIRS}
     ${USE_OROCOS_INCLUDE_DIRS}
 )
@@ -55,4 +55,3 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 orocos_generate_package(INCLUDE_DIRS include)
-
