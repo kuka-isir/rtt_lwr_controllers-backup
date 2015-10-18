@@ -31,6 +31,8 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/foreach.hpp>
 #include <boost/assign.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/scoped_ptr.hpp>
 
 #ifdef CONMAN
 #include <conman/conman.h>
