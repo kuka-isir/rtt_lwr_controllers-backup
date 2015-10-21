@@ -56,6 +56,8 @@ public:
         if(hasPeer(robot_name)){
             RTT::log(RTT::Info) << "Trying to connect to default joint ports."<<RTT::endlog();
             RTT::TaskContext* peer = getPeer(robot_name);
+            if(peer == NULL)
+                return false;
             RTT::ConnPolicy policy = RTT::ConnPolicy::data();
             port_JointPosition.connectTo(peer->getPort("JointPosition"),policy);
             port_JointVelocity.connectTo(peer->getPort("JointVelocity"),policy);
@@ -79,8 +81,8 @@ public:
     }
 
     bool initJointStateMsgFromString(const std::string& robot_description, sensor_msgs::JointState& joint_state)
-    {
-        RTT::log(RTT::Info)<<"Creating Joint State message from robot_description" << RTT::endlog();
+    {        
+        RTT::log(RTT::Debug)<<"Creating Joint State message from robot_description" << RTT::endlog();
         urdf::Model model;
 
         // Verify if provided robot_description is correct
@@ -89,18 +91,28 @@ public:
             return false;
         }
 
-        RTT::log(RTT::Info) << "Robot name : "<<model.getName() << RTT::endlog();
+        RTT::log(RTT::Debug) << "Robot name : "<<model.getName()<< RTT::endlog();
         // Create a blank joint state msg
         joint_state = sensor_msgs::JointState();
 
         // Reading Joints from urdf model
-        for (std::map<std::string, boost::shared_ptr<urdf::Joint> >::const_iterator j=model.joints_.begin(); j!=model.joints_.end(); ++j)
+        for (std::map<std::string, boost::shared_ptr<urdf::Joint> >::iterator j=model.joints_.begin(); j!=model.joints_.end(); ++j)
         {
+            if(j->second->limits)
+            {
+                if(j->second->limits->lower == j->second->limits->upper)
+                {
+                    // NOTE: Setting pseudo fixed-joints to FIXED, so that KDL does not considers them.
+                    RTT::log(RTT::Debug) << "Removing fixed joint "<<j->second->name<<std::endl;
+                    continue;
+                }
+            }
+                
             if(j->second->type != urdf::Joint::FIXED && 
                j->second->type != urdf::Joint::FLOATING)
             {
                 const std::string name = j->first;
-                RTT::log(RTT::Info)<<"Adding Joint "<< name << RTT::endlog();
+                RTT::log(RTT::Debug)<<"Adding Joint "<< name << RTT::endlog();
                 joint_state.name.push_back(name);
                 joint_state.position.push_back(0.);
                 joint_state.velocity.push_back(0.);
