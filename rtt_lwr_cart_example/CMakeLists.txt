@@ -1,29 +1,29 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(rtt_lwr_cart_example)
 
-find_package(catkin REQUIRED COMPONENTS 
+find_package(catkin REQUIRED COMPONENTS
     rtt_ros
     rtt_rosclock
     rtt_roscomm
     rtt_rosparam
-    kuka_lwr_fri 
-    diagnostic_msgs 
-    geometry_msgs 
-    std_msgs 
+    kuka_lwr_fri
+    diagnostic_msgs
+    geometry_msgs
+    std_msgs
     kdl_conversions
     eigen_conversions
     lwr_fri
     rtt_lwr_abstract
     cmake_modules
-    conman
+#    conman
     rtt_ros_kdl_tools
-    interactive_markers 
-    roscpp 
-    visualization_msgs 
+    interactive_markers
+    roscpp
+    visualization_msgs
     tf
 )
 
-set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONMAN)
+#set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CONMAN)
 
 
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS MARKERS)
@@ -34,15 +34,15 @@ find_package(orocos_kdl REQUIRED)
 set(OROCOS_NO_AUTO_LINKING TRUE)
 
 catkin_package(
-   DEPENDS eigen rtt 
+   DEPENDS eigen rtt
    CATKIN_DEPENDS rtt_ros diagnostic_msgs geometry_msgs std_msgs
    )
-   
+
 
 include_directories(
-    include 
-    ${catkin_INCLUDE_DIRS} 
-    ${Eigen_INCLUDE_DIRS} 
+    include
+    ${catkin_INCLUDE_DIRS}
+    ${Eigen_INCLUDE_DIRS}
     ${orocos_kdl_INCLUDE_DIRS}
     ${USE_OROCOS_INCLUDE_DIRS}
 )

@@ -16,6 +16,13 @@
     <arg name="log_level" default="warning" />
     <arg name="gazebo_gui" default="true"/>
 
+    <!-- Tools -->
+    <arg name="load_base" default="true" />
+    <arg name="load_ati_sensor" default="true" />
+    <arg name="load_calib_tool" default="true" />
+    <arg name="load_handle" default="true" />
+
+
 <!--============ LWR Runner script ===============-->  
 
     <include file="$(find lwr_launch)/launch/run.launch">
@@ -30,6 +37,11 @@
         <arg name="log_level" value="$(arg log_level)" />
         <arg name="tip_link" value="$(arg tip_link)"/>
         <arg name="gazebo_gui" value="$(arg gazebo_gui)"/>
+        <arg name="tip_link" default="$(arg tip_link)"/>
+        <arg name="load_base" value="$(arg load_base)" />
+        <arg name="load_ati_sensor" value="$(arg load_ati_sensor)" />
+        <arg name="load_calib_tool" value="$(arg load_calib_tool)" />
+        <arg name="load_handle" value="$(arg load_handle)" />
     </include>
 
 </launch>
