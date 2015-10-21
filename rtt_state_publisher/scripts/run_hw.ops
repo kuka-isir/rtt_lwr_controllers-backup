@@ -5,6 +5,6 @@ ros.import("rtt_state_publisher")
 loadComponent("state_pub","RTTStatePublisher")
 setActivity("state_pub",0.01,LowestPriority,ORO_SCHED_OTHER)
 
-connectPeers("state_pub","lwr")
+connectPeers("lwr","state_pub")
 
 state_pub.configure()
