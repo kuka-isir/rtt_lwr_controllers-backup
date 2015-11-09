@@ -29,7 +29,8 @@
     <!-- Launch rviz -->
     <arg name="rviz" default="true" />
     <!-- The level of verbose (never, fatal, critical, error, warning, info, debug, realtime) -->
-    <arg name="log_level" default="warning" />
+    <arg name="log_level" default="info" />
+
     <!-- Tools -->
     <arg name="load_base" default="true" />
     <arg name="load_ati_sensor" default="true" />
@@ -39,9 +40,10 @@
     <!-- Gazebo -->
     <arg name="gazebo_gui" default="true"/>
     <arg name="launch_gazebo" default="true"/>
+
 <!--============ JT Params ============-->
   
-    <!-- The parameters that the CartOptCtrl sensor will get -->
+    <!-- The parameters that the JT Controller sensor will get -->
     <rosparam ns="jt" subst_value="true">
         use_kdl: true
         add_damping: false
@@ -73,3 +75,4 @@
     </include>
 
 </launch>
+
