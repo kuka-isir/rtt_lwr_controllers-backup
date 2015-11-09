@@ -1,7 +1,8 @@
 // Start LWR SIMULATION
 import("rtt_ros")
 ros.import("rtt_rospack")
-runScript(ros.find("rtt_lwr_sim")+"/scripts/lwr_sim.ops")
+runScript(ros.find("rtt_lwr_sim")+"/scripts/lwr_sim_standalone.ops")
+lwr_sim.setInitialJointPosition(array(1.0,0.,0.0,-1.57,0.0,1.57,0.))
 // Start rtt_lwr_jt_controller
 runScript(ros.find("rtt_lwr_jt_controller")+"/scripts/run_sim.ops")
-example.start()
+jt.start()

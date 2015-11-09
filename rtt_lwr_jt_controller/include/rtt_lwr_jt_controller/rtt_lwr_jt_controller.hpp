@@ -39,7 +39,6 @@ namespace lwr{
       Eigen::Matrix<double,6,1> wrench;
       KDL::Jacobian J_kdl;
       std::string ati_frame;
-      KDL::JntArray jnt_acc_kdl;
       KDL::Wrench wrench_kdl;
       KDL::JntSpaceInertiaMatrix mass_kdl;
       bool use_kdl;
@@ -49,6 +48,7 @@ namespace lwr{
       Eigen::VectorXd kg;
       Eigen::VectorXd kd;
       Eigen::Affine3d tool_in_base_frame_eigen;
+      bool use_ft_sensor;
   };
 }
 ORO_CREATE_COMPONENT(lwr::JtATIController)
