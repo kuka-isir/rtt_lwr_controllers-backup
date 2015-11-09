@@ -37,7 +37,6 @@
         <arg name="log_level" value="$(arg log_level)" />
         <arg name="tip_link" value="$(arg tip_link)"/>
         <arg name="gazebo_gui" value="$(arg gazebo_gui)"/>
-        <arg name="tip_link" default="$(arg tip_link)"/>
         <arg name="load_base" value="$(arg load_base)" />
         <arg name="load_ati_sensor" value="$(arg load_ati_sensor)" />
         <arg name="load_calib_tool" value="$(arg load_calib_tool)" />
