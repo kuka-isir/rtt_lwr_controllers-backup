@@ -13,15 +13,15 @@ public:
     virtual ~RTTLWRExample(){};
     void updateHook();
     bool configureHook();
-    double ks_;
+    double freq_;
     int cnt_;
     bool initialized_;
-    void setAmplitude(double amplitude);
-    std::vector<double> kp,kd;
-    void setGains(double p,double d);
-    bool torque_only;
+    void setGains(unsigned int i,double p,double d);
+    bool setLinkEnabled(unsigned int i,bool val);
     double amplitude_;
-    
+    std::vector<bool> link_enabled_;
+    Eigen::VectorXd jnt_pos_init;
+
 };
 }
 ORO_CREATE_COMPONENT(lwr::RTTLWRExample)
