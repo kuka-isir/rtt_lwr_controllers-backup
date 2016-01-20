@@ -9,12 +9,14 @@
 #include <sstream>
 #include <rtt/Component.hpp>
 #include <rtt/Port.hpp>
+#include <rtt/Operation.hpp>
 #include <rtt/TaskContext.hpp>
 #include <rtt/Logger.hpp>
 #include <urdf/model.h>
 #include <rtt_roscomm/rtt_rostopic.h>
 #include <std_msgs/Float32.h>
 #include <rtt_rosparam/rosparam.h>
+#include <rtt_ros_kdl_tools/mqueue_connpolicy.hpp>
 
 class RTTStatePublisher : public RTT::TaskContext{
 public:
@@ -33,6 +35,8 @@ public:
             addPort("JointTorque", port_JointTorque).doc("");
             addPort("JointStates", port_JointStates).doc("");
             addPort("period", port_period).doc("");
+            addOperation("connectMQueue",&RTTStatePublisher::connectMQueue,this,RTT::OwnThread);
+            addOperation("connectDefault",&RTTStatePublisher::connectDefault,this,RTT::OwnThread);
     }
     bool configureHook(){
         boost::shared_ptr<rtt_rosparam::ROSParam> rosparam =
@@ -53,33 +57,48 @@ public:
 
         RTT::log(RTT::Info) << "Provided robot name : "<<robot_name <<RTT::endlog();
 
-        if(hasPeer(robot_name)){
-            RTT::log(RTT::Info) << "Trying to connect to default joint ports."<<RTT::endlog();
-            RTT::TaskContext* peer = getPeer(robot_name);
-            if(peer == NULL)
-                return false;
-            RTT::ConnPolicy policy = RTT::ConnPolicy::data();
-            port_JointPosition.connectTo(peer->getPort("JointPosition"),policy);
-            port_JointVelocity.connectTo(peer->getPort("JointVelocity"),policy);
-            port_JointTorque.connectTo(peer->getPort("JointTorque"),policy);
-        }else{
-            RTT::log(RTT::Warning)<<"Couldn't find "<<robot_name<<" peer, please add this in your ops:"
-                <<"\n\nconnect(\""<<getName()<<"."<<port_JointPosition.getName()
-                    <<"\",\"your_comp.joint_pos_curr\",ConnPolicy())"
-                <<"\nconnect(\""<<getName()<<"."<<port_JointVelocity.getName()
-                    <<"\",\"your_comp.joint_vel_curr\",ConnPolicy())"
-                <<"\nconnect(\""<<getName()<<"."<<port_JointTorque.getName()
-                    <<"\",\"your_comp.joint_trq_curr\",ConnPolicy())\n"<<RTT::endlog();
-            return false;
-        }
-
         port_JointStates.createStream(rtt_roscomm::topic("joint_states"));
         port_period.createStream(rtt_roscomm::topic(getName()+"/period"));
 
         last = rtt_rosclock::host_now();
         return true;
     }
-
+    
+    bool connectMQueue(const std::string& robot_name) // Bare/CORBA
+    {
+        RTT::log(RTT::Warning) << "Trying to connect to "<<robot_name<<" default joint ports using MQueue"<<RTT::endlog();
+        if(hasPeer(robot_name)){
+            /*RTT::TaskContext* peer = getPeer(robot_name);
+            if(peer == NULL){
+                RTT::log(RTT::Error) << "Peer is NULL"<<RTT::endlog();
+                return false;
+            }*/
+            port_JointPosition.connectTo(getPeer(robot_name)->getPort("JointPosition"),RTT::MQConnPolicy::mq_data());
+            port_JointVelocity.connectTo(getPeer(robot_name)->getPort("JointVelocity"),RTT::MQConnPolicy::mq_data());
+            port_JointTorque.connectTo(getPeer(robot_name)->getPort("JointTorque"),RTT::MQConnPolicy::mq_data());      
+        }else{
+            return false;
+        }     
+        return port_JointPosition.connected() || port_JointVelocity.connected() || port_JointTorque.connected();
+    }
+    
+    bool connectDefault(const std::string& robot_name) // MQueue
+    {
+        if(hasPeer(robot_name)){
+            RTT::log(RTT::Info) << "Trying to connect to default joint ports."<<RTT::endlog();
+            RTT::TaskContext* peer = getPeer(robot_name);
+            if(peer == NULL) return false;
+            RTT::ConnPolicy policy = RTT::ConnPolicy::data();
+            
+            port_JointPosition.connectTo(peer->getPort("JointPosition"),policy);
+            port_JointVelocity.connectTo(peer->getPort("JointVelocity"),policy);
+            port_JointTorque.connectTo(peer->getPort("JointTorque"),policy);
+        }else{
+            return false;
+        }     
+        return port_JointPosition.connected() || port_JointVelocity.connected() || port_JointTorque.connected();
+    }
+    
     bool initJointStateMsgFromString(const std::string& robot_description, sensor_msgs::JointState& joint_state)
     {        
         RTT::log(RTT::Debug)<<"Creating Joint State message from robot_description" << RTT::endlog();
