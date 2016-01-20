@@ -51,7 +51,7 @@ void JtATIController::updateHook()
     if(use_ft_sensor && port_ftdata.read(wrench_msg) != RTT::NewData)
         return;
     
-    updateState();
+    if(!updateState()) return;
     
     jnt_trq_cmd.setZero();
     
