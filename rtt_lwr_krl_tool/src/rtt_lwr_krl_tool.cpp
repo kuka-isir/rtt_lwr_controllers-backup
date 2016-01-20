@@ -21,21 +21,21 @@ KRLTool::KRLTool(const std::string& name): TaskContext(name)
 }
 void KRLTool::resetJointImpedanceGains()
 {
-    lwr_fri::FriJointImpedance defaults;
-    for(unsigned int i=0;i<7;++i){
-        defaults.stiffness[i] = 1000.;
-        defaults.damping[i] = 0.7;
+    lwr_fri::FriJointImpedance cmd;
+    for(unsigned int i=0;i<cmd.stiffness.size();++i){
+        cmd.stiffness[i] = 1000.;
+        cmd.damping[i] = 0.7;
     }
-    port_JointImpedanceCommand.write(defaults);
+    port_JointImpedanceCommand.write(cmd);
 }
 void KRLTool::setStiffnessZero()
 {
-    lwr_fri::FriJointImpedance z;
-    for(unsigned int i=0;i<7;++i){
-        z.stiffness[i] = 0.0;
-        z.damping[i] = 0.0;
+    lwr_fri::FriJointImpedance cmd;
+    for(unsigned int i=0;i<cmd.damping.size();++i){
+        cmd.stiffness[i] = 0.0;
+        cmd.damping[i] = 0.0;
     }
-    port_JointImpedanceCommand.write(z);
+    port_JointImpedanceCommand.write(cmd);
 }
 
 bool KRLTool::setJointImpedanceMode()
@@ -118,7 +118,7 @@ void KRLTool::updateHook()
     {  
         for(unsigned i=0;i<FRI_USER_SIZE && i<realDataToKRL.data.size();++i)
         {
-            toKRL.realData[i]  = fromKRL.realData[i] ;
+            toKRL.realData[i]  = fromKRL.realData[i];
             if(realDataToKRL.data[i] >= 0)
                 toKRL.realData[i] = static_cast<fri_float_t>(realDataToKRL.data[i]);
         }
