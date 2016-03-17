@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <launch>
 <!--============ LWR Runner script Params ========-->
-    
+
     <!-- The end effector frame (you'll be able to use frames <= tip_link for cartesian position, jacobians etc.) -->
-    <arg name="tip_link" default="ati_link"/>
+    <arg name="tip_link" default="link_7"/>
     <!-- Run Simulated robot (need to 'roslaunch rtt_lwr_gazebo lwr_gazebo.launch' first) -->
     <arg name="sim" default="false" />
-    <!-- The global namespace if you need to change it (unlikely) -->
-    <arg name="robot_ns" default="/"/>
     <!-- Run in GDB -->
     <arg name="debug" default="false" />
     <!-- Launch rviz -->
@@ -23,16 +21,13 @@
     <arg name="load_handle" default="true" />
     <arg name="launch_gazebo" default="true" />
     <arg name="spawn_in_gazebo_process" default="false"/>
-    
-<!--============ LWR Runner script ===============-->  
+    <arg name="use_sim_time" default="true"/>
+<!--============ LWR Runner script ===============-->
 
     <include file="$(find lwr_launch)/launch/run.launch">
         <arg name="sim" value="$(arg sim)" />
         <!-- Default ops script location for real robot -->
-        <arg name="ops_script" value="$(find rtt_state_publisher)/scripts/run_hw_standalone.ops" unless="$(arg sim)"/>
-        <!-- Default ops script location for simulated robot -->
-        <arg name="ops_script" value="$(find rtt_state_publisher)/scripts/run_sim_standalone.ops" if="$(arg sim)"/>
-        <arg name="robot_ns" value="$(arg robot_ns)"/>
+        <arg name="ops_script" value="$(find rtt_state_publisher)/scripts/runner.ops"/>
         <arg name="debug" value="$(arg debug)" />
         <arg name="rviz" value="$(arg rviz)" />
         <arg name="log_level" value="$(arg log_level)" />
@@ -44,7 +39,7 @@
         <arg name="launch_gazebo" value="$(arg launch_gazebo)"/>
         <arg name="load_handle" value="$(arg load_handle)" />
         <arg name="spawn_in_gazebo_process" value="$(arg spawn_in_gazebo_process)"/>
+        <arg name="use_sim_time" value="$(arg use_sim_time)"/>
     </include>
 
 </launch>
-
