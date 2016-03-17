@@ -1,8 +1,0 @@
-import("rtt_ros")
-ros.import("rtt_lwr_jt_controller")
-loadComponent("jt","lwr::JtATIController")
-setActivity("jt",0.001,LowestPriority,ORO_SCHED_RT)
-connectPeers("jt","lwr")
-connectPeers("jt","ft_sensor")
-connect("ft_sensor.WrenchStamped","jt.ft_data_in",ConnPolicy())
-jt.configure()
