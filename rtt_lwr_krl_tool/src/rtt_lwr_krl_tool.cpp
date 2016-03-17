@@ -14,8 +14,9 @@ KRLTool::KRLTool(const std::string& name): TaskContext(name)
     this->ports()->addPort("fromKRL",port_fromKRL).doc("");
     this->ports()->addPort("JointImpedanceCommand",port_JointImpedanceCommand).doc("");
     
-    this->addOperation("setJointImpedanceMode",&KRLTool::setJointImpedanceMode,this,RTT::OwnThread);
-    this->addOperation("setJointPositionMode",&KRLTool::setJointPositionMode,this,RTT::OwnThread);
+    this->addOperation("setJointImpedanceControlMode",&KRLTool::setJointImpedanceControlMode,this,RTT::OwnThread);
+    this->addOperation("setJointTorqueControlMode",&KRLTool::setJointTorqueControlMode,this,RTT::OwnThread);
+    this->addOperation("setJointPositionControlMode",&KRLTool::setJointPositionControlMode,this,RTT::OwnThread);
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this,RTT::OwnThread);
     this->addOperation("setStiffnessZero",&KRLTool::setStiffnessZero,this,RTT::OwnThread);
 }
@@ -38,7 +39,7 @@ void KRLTool::setStiffnessZero()
     port_JointImpedanceCommand.write(cmd);
 }
 
-bool KRLTool::setJointImpedanceMode()
+bool KRLTool::setJointImpedanceControlMode()
 {
         int n=1000;
     while(n-- > 0 && port_fromKRL.read(fromKRL) != RTT::NewData)
@@ -51,6 +52,12 @@ bool KRLTool::setJointImpedanceMode()
     port_toKRL.write(toKRL);
     return isJointImpedanceMode();
 }
+bool KRLTool::setJointTorqueControlMode()
+{
+    setJointImpedanceControlMode();
+    setStiffnessZero();
+    return isJointTorqueMode();
+}
 bool KRLTool::isJointPositionMode()
 {
     int n=1000;
@@ -59,15 +66,20 @@ bool KRLTool::isJointPositionMode()
 
     return fromKRL.intData[1] == 10;
 }
+bool KRLTool::isJointTorqueMode()
+{
+    return isJointImpedanceMode();
+
+}
 bool KRLTool::isJointImpedanceMode()
 {
     int n=1000;
     while(n-- > 0 && port_fromKRL.read(fromKRL) != RTT::NewData)
-        RTT::log(RTT::Debug) << "Waiting for new data i" << RTT::endlog();
+        ;//RTT::log(RTT::Debug) << "Waiting for new data i" << RTT::endlog();
 
     return fromKRL.intData[1] == 30;
 }
-bool KRLTool::setJointPositionMode()
+bool KRLTool::setJointPositionControlMode()
 {
     int n=1000;
     while(n-- > 0 && port_fromKRL.read(fromKRL) != RTT::NewData)

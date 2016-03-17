@@ -41,9 +41,11 @@ public:
     std_msgs::Float32MultiArray realDataToKRL;
     std_msgs::Float32MultiArray realDataFromKRL;
     bool send_diag;
-    bool setJointImpedanceMode();
-    bool setJointPositionMode();
+    bool setJointImpedanceControlMode();
+    bool setJointPositionControlMode();
+    bool setJointTorqueControlMode();
     bool isJointPositionMode();
+    bool isJointTorqueMode();
     bool isJointImpedanceMode();
     RTT::OutputPort<lwr_fri::FriJointImpedance> port_JointImpedanceCommand;
     void resetJointImpedanceGains();
