@@ -19,6 +19,7 @@
     <arg name="load_ati_sensor" default="true" />
     <arg name="load_calib_tool" default="true" />
     <arg name="load_handle" default="true" />
+    <arg name="load_camera" default="false" />
     <arg name="launch_gazebo" default="true" />
     <arg name="spawn_in_gazebo_process" default="false"/>
     <arg name="use_sim_time" default="true"/>
@@ -38,6 +39,7 @@
         <arg name="load_calib_tool" value="$(arg load_calib_tool)" />
         <arg name="launch_gazebo" value="$(arg launch_gazebo)"/>
         <arg name="load_handle" value="$(arg load_handle)" />
+        <arg name="load_camera" value="$(arg load_camera)" />
         <arg name="spawn_in_gazebo_process" value="$(arg spawn_in_gazebo_process)"/>
         <arg name="use_sim_time" value="$(arg use_sim_time)"/>
     </include>
