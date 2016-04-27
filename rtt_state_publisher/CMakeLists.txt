@@ -10,10 +10,6 @@ find_package(catkin REQUIRED COMPONENTS
 )
 find_package(Eigen REQUIRED)
 
-catkin_package(
-  DEPENDS eigen
-)
-
 include_directories(${catkin_INCLUDE_DIRS} ${Eigen_INCLUDE_DIRS})
 
 orocos_component(${PROJECT_NAME} src/${PROJECT_NAME}.cpp)

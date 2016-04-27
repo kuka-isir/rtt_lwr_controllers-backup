@@ -39,7 +39,7 @@ public:
 
         if(! rtt_ros_kdl_tools::initJointStateMsgFromString(robot_description,joint_state)) return false;
 
-        RTT::log(RTT::Info) << "Joint state message : "<<joint_state<<RTT::endlog();
+        //RTT::log(RTT::Info) << "Joint state message : "<<joint_state<<RTT::endlog();
 
         unsigned int dof = joint_state.position.size();
         if(!dof) return false;
