@@ -2,7 +2,7 @@
 import("rtt_ros")
 ros.import("rtt_rospack")
 
-runScript(ros.find("lwr_launch")+"/scripts/lwr_runner.ops")
+runScript(ros.find("lwr_utils")+"/scripts/lwr_runner.ops")
 runScript(ros.find("rtt_lwr_jt_controller")+"/scripts/loader.ops")
 
 jt.start()

@@ -42,7 +42,7 @@
     </rosparam>
     <!--============ LWR Runner script ===============-->
 
-    <include file="$(find lwr_launch)/launch/run.launch">
+    <include file="$(find lwr_utils)/launch/run.launch">
         <arg name="sim" value="$(arg sim)" />
         <!-- Default ops script location for real robot -->
         <arg name="ops_script" value="$(find rtt_lwr_jt_controller)/scripts/runner.ops"/>
