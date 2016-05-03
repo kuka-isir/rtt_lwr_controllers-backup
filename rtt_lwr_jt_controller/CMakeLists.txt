@@ -43,7 +43,5 @@ target_link_libraries(${PROJECT_NAME}
     ${kdl_conversions_LIBRARIES}
 )
 
-
-add_dependencies(${PROJECT_NAME} rtt_lwr_abstract)
 orocos_install_headers(DIRECTORY include/${PROJECT_NAME})
 orocos_generate_package(INCLUDE_DIRS include)

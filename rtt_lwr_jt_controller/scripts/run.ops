@@ -1,0 +1,21 @@
+
+import("rtt_rospack")
+runScript(ros.find("lwr_utils")+"/scripts/utils.ops")
+
+loadRobot(getRobotName(),isSim(),true)
+
+var string ati_ft_sensor = loadAtiFTSensor(true)
+
+ros.import("rtt_lwr_jt_controller")
+
+loadComponent("jt","lwr::JtATIController")
+
+setActivity("jt",0.001,20,ORO_SCHED_RT)
+
+connectStandardPorts("jt",getRobotName(),ConnPolicy())
+
+connectToAtiFTSensorPort("jt","ft_data_in",ConnPolicy())
+
+configureComponent("jt")
+
+startComponent("jt")

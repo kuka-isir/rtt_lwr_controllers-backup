@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <launch>
-
-
     <!--============ LWR Runner script Params ========-->
 
     <!-- The end effector frame (you'll be able to use frames <= tip_link for cartesian position, jacobians etc.) -->
@@ -29,8 +27,6 @@
     <arg name="start_paused" default="false"/>
     <!-- Gazebo -->
     <arg name="gazebo_gui" default="true"/>
-    <arg name="launch_gazebo" default="true"/>
-    <arg name="spawn_in_gazebo_process" default="false"/>
 
     <!-- The parameters that the JT Controller sensor will get -->
     <rosparam ns="$(arg robot_ns)/jt" subst_value="true">
@@ -45,7 +41,7 @@
     <include file="$(find lwr_utils)/launch/run.launch">
         <arg name="sim" value="$(arg sim)" />
         <!-- Default ops script location for real robot -->
-        <arg name="ops_script" value="$(find rtt_lwr_jt_controller)/scripts/runner.ops"/>
+        <arg name="ops_script" value="$(find rtt_lwr_jt_controller)/scripts/run.ops"/>
         <arg name="robot_ns" value="$(arg robot_ns)"/>
         <arg name="robot_name" value="$(arg robot_name)"/>
         <arg name="debug" value="$(arg debug)" />
@@ -57,9 +53,6 @@
         <arg name="load_calib_tool" value="$(arg load_calib_tool)" />
         <arg name="load_handle" value="$(arg load_handle)" />
         <arg name="gazebo_gui" value="$(arg gazebo_gui)"/>
-        <arg name="launch_gazebo" value="$(arg launch_gazebo)"/>
-        <arg name="start_paused" value="$(arg start_paused)"/>
-        <arg name="spawn_in_gazebo_process" value="$(arg spawn_in_gazebo_process)"/>
     </include>
 
 </launch>
