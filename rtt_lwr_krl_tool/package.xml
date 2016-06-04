@@ -15,11 +15,13 @@
   <build_depend>std_msgs</build_depend>
   <build_depend>std_srvs</build_depend>
   <build_depend>kuka_lwr_fri</build_depend>
+  <build_depend>lwr_fri</build_depend>
   <build_depend>rtt_roscomm</build_depend>
   <build_depend>rtt_rosparam</build_depend>
   <build_depend>rtt_rosclock</build_depend>
   
   <run_depend>rtt_roscomm</run_depend>
+  <run_depend>lwr_fri</run_depend>
   <run_depend>rtt_rosparam</run_depend>
   <run_depend>rtt_rosclock</run_depend>
   <run_depend>rtt</run_depend>
