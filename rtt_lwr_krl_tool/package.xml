@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
   <name>rtt_lwr_krl_tool</name>
-  <version>1.0.0</version>
-  <description>Orocos lwr_example Component package</description>
+  <version>2.0.0</version>
+  <description>Tool to talk with KRL program on Kuka LWR 4+</description>
 
   <maintainer email="hoarau.robotics@gmail.com">Antoine Hoarau</maintainer>
 
@@ -13,11 +13,11 @@
   <build_depend>rtt</build_depend>
   <build_depend>rtt_ros</build_depend>
   <build_depend>std_msgs</build_depend>
+  <build_depend>std_srvs</build_depend>
   <build_depend>kuka_lwr_fri</build_depend>
   <build_depend>rtt_roscomm</build_depend>
   <build_depend>rtt_rosparam</build_depend>
   <build_depend>rtt_rosclock</build_depend>
-  <build_depend>lwr_fri</build_depend>
   
   <run_depend>rtt_roscomm</run_depend>
   <run_depend>rtt_rosparam</run_depend>
@@ -25,7 +25,7 @@
   <run_depend>rtt</run_depend>
   <run_depend>rtt_ros</run_depend>
   <run_depend>std_msgs</run_depend>
-  <run_depend>lwr_fri</run_depend>
+  <run_depend>std_srvs</run_depend>
   
   <export>
     <rtt_ros>

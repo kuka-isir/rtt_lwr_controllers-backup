@@ -4,8 +4,8 @@ project(rtt_lwr_krl_tool)
 find_package(catkin REQUIRED COMPONENTS
     rtt_ros
     kuka_lwr_fri
-    lwr_fri
     std_msgs
+    std_srvs
     cmake_modules
 )
 

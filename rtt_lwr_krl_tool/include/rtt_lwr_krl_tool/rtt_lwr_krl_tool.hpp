@@ -8,26 +8,38 @@
 #include <rtt/RTT.hpp>
 #include <rtt/Attribute.hpp>
 #include <rtt/Component.hpp>
-#include <rtt_rosparam/rosparam.h>
-#include <rtt_rosclock/rtt_rosclock.h>
 #include <rtt/os/TimeService.hpp>
 #include <rtt/Logger.hpp>
+
 #include <rtt_roscomm/rtt_rostopic.h>
-#include <kuka_lwr_fri/friComm.h>
+#include <rtt_rosparam/rosparam.h>
+
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/ByteMultiArray.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/Int32MultiArray.h>
+
+#include <std_srvs/Trigger.h>
+#include <std_srvs/Empty.h>
+
 #include <lwr_fri/FriJointImpedance.h>
+#include <kuka_lwr_fri/friComm.h>
 
 namespace lwr{
+    
+    static const size_t CONTROL_MODE    = 1;
+    static const size_t FRI_STATE       = 0;
+    static const int NO_UPDATE = -9999;
+    
 class KRLTool : public RTT::TaskContext{
 public:
     KRLTool(const std::string& name);
     virtual ~KRLTool(){};
     void updateHook();
     bool configureHook();
+protected:
     RTT::InputPort<tFriKrlData> port_fromKRL;
     RTT::OutputPort<tFriKrlData> port_toKRL;
     tFriKrlData toKRL;
@@ -40,16 +52,35 @@ public:
     RTT::OutputPort<std_msgs::Float32MultiArray> port_realDataFromKRL_ros;
     std_msgs::Float32MultiArray realDataToKRL;
     std_msgs::Float32MultiArray realDataFromKRL;
-    bool send_diag;
-    bool setJointImpedanceControlMode();
-    bool setJointPositionControlMode();
-    bool setJointTorqueControlMode();
+    
+    void setJointImpedanceControlMode();
+    void setCartesianImpedanceControlMode();
+    void setJointPositionControlMode();
+    void setJointTorqueControlMode();
+    
+    bool setJointImpedanceControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
+    bool setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
+    bool setJointPositionControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
+    bool setJointTorqueControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
+    
+    bool getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_srvs::TriggerResponse& resp);
+        
     bool isJointPositionMode();
     bool isJointTorqueMode();
+    bool isCartesianImpedanceMode();
     bool isJointImpedanceMode();
+    
     RTT::OutputPort<lwr_fri::FriJointImpedance> port_JointImpedanceCommand;
+    
     void resetJointImpedanceGains();
     void setStiffnessZero();
+    
+private:    
+    bool do_update;
+    lwr_fri::FriJointImpedance cmd;
+    bool is_joint_torque_control_mode;
+    bool do_send_imp_cmd;
+    bool is_initialized;
 };
 }
 ORO_CREATE_COMPONENT(lwr::KRLTool)
