@@ -40,16 +40,20 @@ public:
     void updateHook();
     bool configureHook();
 protected:
+    RTT::OutputPort<lwr_fri::FriJointImpedance> port_JointImpedanceCommand;
     RTT::InputPort<tFriKrlData> port_fromKRL;
     RTT::OutputPort<tFriKrlData> port_toKRL;
-    tFriKrlData toKRL;
-    tFriKrlData fromKRL;
     RTT::InputPort<std_msgs::Int32MultiArray> port_intDataToKRL_ros;
     RTT::OutputPort<std_msgs::Int32MultiArray> port_intDataFromKRL_ros;
-    std_msgs::Int32MultiArray intDataToKRL;
-    std_msgs::Int32MultiArray intDataFromKRL;
     RTT::InputPort<std_msgs::Float32MultiArray> port_realDataToKRL_ros;
     RTT::OutputPort<std_msgs::Float32MultiArray> port_realDataFromKRL_ros;
+    
+    tFriKrlData toKRL;
+    tFriKrlData fromKRL;
+
+    std_msgs::Int32MultiArray intDataToKRL;
+    std_msgs::Int32MultiArray intDataFromKRL;
+
     std_msgs::Float32MultiArray realDataToKRL;
     std_msgs::Float32MultiArray realDataFromKRL;
     
@@ -69,8 +73,6 @@ protected:
     bool isJointTorqueMode();
     bool isCartesianImpedanceMode();
     bool isJointImpedanceMode();
-    
-    RTT::OutputPort<lwr_fri::FriJointImpedance> port_JointImpedanceCommand;
     
     void resetJointImpedanceGains();
     void setStiffnessZero();
