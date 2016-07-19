@@ -5,7 +5,7 @@
 namespace lwr{
 using namespace RTT;
 
-KRLTool::KRLTool(const std::string& name): 
+KRLTool::KRLTool(const std::string& name):
 TaskContext(name),
 do_update(false),
 do_send_imp_cmd(false),
@@ -30,10 +30,12 @@ is_joint_torque_control_mode(false)
     this->addOperation("setCartesianImpedanceControlModeROSService",&KRLTool::setCartesianImpedanceControlModeROSService,this);
 
     this->addOperation("getCurrentControlModeROSService",&KRLTool::getCurrentControlModeROSService,this);
-    
+    this->addOperation("getCurrentControlMode",&KRLTool::getCurrentControlMode,this);
+
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this);
     this->addOperation("setStiffnessZero",&KRLTool::setStiffnessZero,this);
-    
+    this->addOperation("PTP",&KRLTool::PTP,this);
+
     for(int i=0;i<FRI_USER_SIZE;i++)
     {
         fromKRL.boolData = toKRL.boolData = 0;
@@ -137,9 +139,17 @@ bool KRLTool::getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_
             break;
         default:
             resp.success = false;
-            resp.message = "Error";    
+            resp.message = "Error";
     }
-    log(Info) << "KRLTool::getCurrentControlModeROSService" << endlog();
+    log(Info) << "KRLTool::getCurrentControlModeROSService - "<<resp.message << endlog();
+    return resp.success;
+}
+
+bool KRLTool::getCurrentControlMode()
+{
+    std_srvs::TriggerRequest req;
+    std_srvs::TriggerResponse resp;
+    return getCurrentControlModeROSService(req,resp);
 }
 
 bool KRLTool::setJointImpedanceControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp)
@@ -163,12 +173,20 @@ bool KRLTool::setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest&
     setCartesianImpedanceControlMode();
 }
 
+void KRLTool::PTP(const std::vector<double>& ptp)
+{
+    for(int i=0,j=lwr::JOINT_START;i<LBR_MNJ && j<lwr::JOINT_END;++i,++j)
+    {
+      toKRL.realData[j] = ptp[i];
+      toKRL.boolData |= (1 << j);
+    }
+}
 void KRLTool::updateHook()
 {
     if(port_fromKRL.read(fromKRL) != NewData)
         return;
     // NOTE : At this point we have a New KRL info
-    
+
     // To ROS for plotting
     for(unsigned i=0;i<FRI_USER_SIZE && i<intDataFromKRL.data.size();++i)
         intDataFromKRL.data[i] = fromKRL.intData[i];
@@ -186,7 +204,7 @@ void KRLTool::updateHook()
                 toKRL.intData[i] = static_cast<fri_int32_t>(intDataToKRL.data[i]);
         do_update = true;
     }
-    
+
     // Incoming ROS Float message
     if(port_realDataToKRL_ros.read(realDataToKRL) == NewData)
     {
