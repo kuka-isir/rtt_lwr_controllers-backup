@@ -26,17 +26,25 @@
 
 #include <lwr_fri/FriJointImpedance.h>
 #include <kuka_lwr_fri/friComm.h>
+#include <rtt_lwr_krl_tool/fri_user_data_description.h>
+
+template<typename T> static bool bitStatus(const T& in, unsigned int bit_number)
+{
+    return ((in >> bit_number) & 1);
+}
+
+template<typename T> static void setBit(T& in, unsigned int bit_number,bool status)
+{
+    if(bitStatus(in,bit_number))
+        in &= ( (status ? 1:0) << bit_number);
+    else
+        in |= ( (status ? 1:0) << bit_number);
+//     in ^= (-status ^ in) & (1 << bit_number);
+    return;
+}
 
 namespace lwr{
-
-static const size_t CONTROL_MODE                      = 1;
-static const size_t TOOL                              = 2;
-static const size_t JOINT_END                         = FRI_USER_SIZE;
-static const size_t JOINT_START                       = JOINT_END - LBR_MNJ - 1;
-static const size_t FRI_STATE                         = 0;
-static const int NO_UPDATE                            = -9999;
-
-
+static const int ROS_MASK_NO_UPDATE = -9999;
 
 class KRLTool : public RTT::TaskContext{
 public:
@@ -56,10 +64,15 @@ protected:
     RTT::InputPort<std_msgs::Float32MultiArray> port_realDataToKRL_ros;
     RTT::OutputPort<std_msgs::Float32MultiArray> port_realDataFromKRL_ros;
     RTT::OutputPort<std_msgs::ByteMultiArray> port_boolDataFromKRL_ros;
+    std_msgs::ByteMultiArray boolDataFromKRL;
     std_msgs::Float32MultiArray realDataToKRL;
     std_msgs::Float32MultiArray realDataFromKRL;
 
-    void PTP(const std::vector<double>& ptp);
+    void PTP(const std::vector<double>& ptp,const std::vector<bool>& mask);
+    void setTool(int tool_number);
+    void setBase(int base_number);
+    
+
     void setJointImpedanceControlMode();
     void setCartesianImpedanceControlMode();
     void setJointPositionControlMode();
