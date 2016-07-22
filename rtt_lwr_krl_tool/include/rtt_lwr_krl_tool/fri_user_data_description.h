@@ -2,15 +2,15 @@
 #define __FRI_USER_DATA_DESCRIPTION__
 
 namespace krl{
-    
+
 enum FRI_BOOL_DATA_DESCRIPTION
 {
     KRL_LOOP_REQUESTED = 0,
-    ACK_FROM_KRL,
+    KRL_ACK,
     SET_CONTROL_MODE,
     SET_TOOL,
     SET_BASE,
-    EXEC_FRI_CMD,
+    PTP_CMD,
     LIN_CMD,
     BOOL_EMPTY0,
     BOOL_EMPTY1,
@@ -49,7 +49,7 @@ enum FRI_REAL_DATA_DESCRIPTION
     REAL_EMPTY5,
     REAL_EMPTY6,
     REAL_EMPTY7,
-    REAL_EMPTY8,
+    VEL_PTP,
     A1,
     A2,
     E1,

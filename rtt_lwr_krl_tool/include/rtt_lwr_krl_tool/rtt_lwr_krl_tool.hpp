@@ -35,11 +35,7 @@ template<typename T> static bool bitStatus(const T& in, unsigned int bit_number)
 
 template<typename T> static void setBit(T& in, unsigned int bit_number,bool status)
 {
-    if(bitStatus(in,bit_number))
-        in &= ( (status ? 1:0) << bit_number);
-    else
-        in |= ( (status ? 1:0) << bit_number);
-//     in ^= (-status ^ in) & (1 << bit_number);
+    in ^= (-status ^ in) & (1 << bit_number);
     return;
 }
 
@@ -68,7 +64,7 @@ protected:
     std_msgs::Float32MultiArray realDataToKRL;
     std_msgs::Float32MultiArray realDataFromKRL;
 
-    void PTP(const std::vector<double>& ptp,const std::vector<bool>& mask);
+    void PTP(const vector< double >& ptp, const vector< double >& mask, bool use_radians, double vel_ptp);
     void setTool(int tool_number);
     void setBase(int base_number);
     

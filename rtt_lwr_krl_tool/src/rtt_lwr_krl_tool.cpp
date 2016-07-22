@@ -38,6 +38,8 @@ is_joint_torque_control_mode(false)
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this);
     this->addOperation("setStiffnessZero",&KRLTool::setStiffnessZero,this);
     this->addOperation("PTP",&KRLTool::PTP,this);
+    this->addOperation("setTool",&KRLTool::setTool,this);
+    this->addOperation("setBase",&KRLTool::setBase,this);
     this->addAttribute("doUpdate",do_update);
 
     for(int i=0;i<FRI_USER_SIZE;i++)
@@ -183,7 +185,7 @@ bool KRLTool::setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest&
     setCartesianImpedanceControlMode();
 }
 
-void KRLTool::PTP(const std::vector<double>& ptp,const std::vector<bool>& mask)
+void KRLTool::PTP(const std::vector<double>& ptp,const std::vector<double>& mask,bool use_radians,double vel_ptp)
 {
     if(ptp.size() != LBR_MNJ)
     {
@@ -197,13 +199,18 @@ void KRLTool::PTP(const std::vector<double>& ptp,const std::vector<bool>& mask)
         return;
     }
 
-    toKRL.realData[A1] = ptp[0];
-    toKRL.realData[A2] = ptp[1];
-    toKRL.realData[E1] = ptp[2];
-    toKRL.realData[A3] = ptp[3];
-    toKRL.realData[A4] = ptp[4];
-    toKRL.realData[A5] = ptp[5];
-    toKRL.realData[A6] = ptp[6];
+    double conv = 1.0;
+
+    if(use_radians)
+        conv = 180.0/3.14159265359;
+
+    toKRL.realData[A1] = conv * ptp[0];
+    toKRL.realData[A2] = 90 + conv * ptp[1];
+    toKRL.realData[E1] = conv * ptp[2];
+    toKRL.realData[A3] = conv * ptp[3];
+    toKRL.realData[A4] = conv * ptp[4];
+    toKRL.realData[A5] = conv * ptp[5];
+    toKRL.realData[A6] = conv * ptp[6];
     setBit(toKRL.boolData,A1_MASK,mask[0]);
     setBit(toKRL.boolData,A2_MASK,mask[1]);
     setBit(toKRL.boolData,E1_MASK,mask[2]);
@@ -212,6 +219,9 @@ void KRLTool::PTP(const std::vector<double>& ptp,const std::vector<bool>& mask)
     setBit(toKRL.boolData,A5_MASK,mask[5]);
     setBit(toKRL.boolData,A6_MASK,mask[6]);
 
+    toKRL.realData[VEL_PTP] = vel_ptp;
+    
+    setBit(toKRL.boolData,PTP_CMD,true);
     do_update = true;
 }
 
@@ -232,22 +242,22 @@ void KRLTool::updateHook()
 {
     static bool has_sent_cmd = false;
     // Incoming ROS Int message
-    if(port_intDataToKRL_ros.read(intDataToKRL) == NewData)
-    {
-        for(unsigned i=0;i<FRI_USER_SIZE && i<intDataToKRL.data.size();++i)
-            if(intDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
-                toKRL.intData[i] = static_cast<fri_int32_t>(intDataToKRL.data[i]);
-        do_update = true;
-    }
-
-    // Incoming ROS Float message
-    if(port_realDataToKRL_ros.read(realDataToKRL) == NewData)
-    {
-        for(unsigned i=0;i<FRI_USER_SIZE && i<realDataToKRL.data.size();++i)
-            if(realDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
-                toKRL.realData[i] = static_cast<fri_float_t>(realDataToKRL.data[i]);
-        do_update = true;
-    }
+//     if(port_intDataToKRL_ros.read(intDataToKRL) == NewData)
+//     {
+//         for(unsigned i=0;i<FRI_USER_SIZE && i<intDataToKRL.data.size();++i)
+//             if(intDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
+//                 toKRL.intData[i] = static_cast<fri_int32_t>(intDataToKRL.data[i]);
+//         do_update = true;
+//     }
+//
+//     // Incoming ROS Float message
+//     if(port_realDataToKRL_ros.read(realDataToKRL) == NewData)
+//     {
+//         for(unsigned i=0;i<FRI_USER_SIZE && i<realDataToKRL.data.size();++i)
+//             if(realDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
+//                 toKRL.realData[i] = static_cast<fri_float_t>(realDataToKRL.data[i]);
+//         do_update = true;
+//     }
 
     // To KRL
 
@@ -255,25 +265,25 @@ void KRLTool::updateHook()
     {
         cout <<"fromKRL.boolData : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << bitStatus(fromKRL.boolData,i) <<" ";cout << "]" <<endl;
 
-        if(bitStatus(fromKRL.boolData,1) && has_sent_cmd)
+        if(bitStatus(fromKRL.boolData,KRL_ACK) && has_sent_cmd)
         {
             do_update = false;
             has_sent_cmd = false;
-            setBit(toKRL.boolData,0,false);
-            setBit(toKRL.boolData,1,false);
+            setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
+            setBit(toKRL.boolData,KRL_ACK,false);
             cout <<"----- ACKED   -----" << endl;
         }
         else if(bitStatus(fromKRL.boolData,1) && !has_sent_cmd)
         {
             // special case, bug or error, lets write 00
-            setBit(toKRL.boolData,0,false);
-            setBit(toKRL.boolData,1,false);
+            setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
+            setBit(toKRL.boolData,KRL_ACK,false);
             cout <<"----- Wait    -----" << endl;
         }
         else
         {
             // Request an update
-            setBit(toKRL.boolData,0,true);
+            setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
             cout <<"----- WRITING -----" << endl;
             has_sent_cmd = true;
         }
@@ -281,8 +291,8 @@ void KRLTool::updateHook()
         cout <<"toKRL.boolData :   [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << bitStatus(toKRL.boolData,i) <<" ";cout << "]" <<endl;
 
     }else{
-        setBit(toKRL.boolData,0,false);
-        setBit(toKRL.boolData,1,false);
+        setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
+        setBit(toKRL.boolData,KRL_ACK,false);
     }
 
     port_toKRL.write(toKRL);
@@ -295,17 +305,17 @@ void KRLTool::updateHook()
 
     port_fromKRL.read(fromKRL); // Should be after the first command !
 
-        /* To ROS for plotting */
-    for(int i=0;i<FRI_USER_SIZE;++i)
-        intDataFromKRL.data[i] = fromKRL.intData[i];
-    for(int i=0;i<FRI_USER_SIZE;++i)
-        realDataFromKRL.data[i] = fromKRL.realData[i];
-    for(int i=0;i<FRI_USER_SIZE;++i)
-        boolDataFromKRL.data[i] = bitStatus(fromKRL.boolData , i);
-
-    port_intDataFromKRL_ros.write(intDataFromKRL);
-    port_realDataFromKRL_ros.write(realDataFromKRL);
-    port_boolDataFromKRL_ros.write(boolDataFromKRL);
+//         /* To ROS for plotting */
+//     for(int i=0;i<FRI_USER_SIZE;++i)
+//         intDataFromKRL.data[i] = fromKRL.intData[i];
+//     for(int i=0;i<FRI_USER_SIZE;++i)
+//         realDataFromKRL.data[i] = fromKRL.realData[i];
+//     for(int i=0;i<FRI_USER_SIZE;++i)
+//         boolDataFromKRL.data[i] = bitStatus(fromKRL.boolData , i);
+//
+//     port_intDataFromKRL_ros.write(intDataFromKRL);
+//     port_realDataFromKRL_ros.write(realDataFromKRL);
+//     port_boolDataFromKRL_ros.write(boolDataFromKRL);
 
 }
 

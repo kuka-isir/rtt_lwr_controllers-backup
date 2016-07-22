@@ -1,0 +1,318 @@
+&ACCESS RVP
+&REL 37
+&COMMENT ISIR-CNRS 2016
+&PARAM tool_number = 10
+&PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
+&PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
+&PARAM fri_rate_ms = 1.0
+&PARAM base_number = 0
+&PARAM EDITMASK = *
+DEF friisir2_aircelle( )
+;FOLD ProgramInfo
+; Copyright ISIR-CNRS 2016
+; Author: Antoine Hoarau
+;ENDFOLD (ProgramInfo)
+
+;FOLD Variables declaration
+INT i
+DECL FRISTATE ret
+REAL fri_rate_ms
+INT  tool_number
+EXT  resetSTIFFNESS ( )
+DECL E6AXIS start_pose
+DECL E6AXIS PTP_CMD
+;ENDFOLD DECL Variables
+;FOLD INI
+;FOLD BASISTECH INI
+ GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
+ INTERRUPT ON 3
+ BAS (#INITMOV,0 )
+ GLOBAL INTERRUPT DECL 4 WHEN $FRI_TO_BOOL[5]==TRUE DO IR_STOPM()
+ INTERRUPT ON 4
+;ENDFOLD (BASISTECH INI)
+;FOLD USER INI
+  ;FOLD BCO run to current position
+     ; This part is required to perform a "BCO run".
+     ; A BCO run is required to enable the automatic mode.
+    ; $H_POS=XHOME
+    ; PDAT_ACT=PDEFAULT
+    ; BAS (#PTP_DAT )
+    ; FDAT_ACT=FHOME
+    ; BAS (#FRAMES )
+    ; BAS (#VEL_PTP,100 )
+    ; PTP $AXIS_ACT_MES
+  ;ENDFOLD
+  ;FOLD Initialisation of shared array
+  for i=1 to 16
+    $fri_to_int[i]=0
+    $fri_to_rea[i]=0.0
+    $fri_to_bool[i]=false
+  endfor
+  ;ENDFOLD
+;ENDFOLD (USER INI)
+;ENDFOLD (INI)
+
+;FOLD Variable information
+;ENDFOLD Variable information
+
+; Script Parameters
+tool_number = 5
+fri_rate_ms = 1.0
+start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
+
+;FOLD FRI Reset()
+ret=fristop()
+ret=friclose()
+
+$fri_to_int[1] = 0
+$fri_to_int[2] = 10
+$fri_to_int[3] = tool_number
+
+resetSTIFFNESS()
+
+BAS(#TOOL,tool_number)
+$STIFFNESS.TOOL = $TOOL
+$STIFFNESS.BASE = $BASE
+$STIFFNESS.COMMIT=TRUE
+;ENDFOLD
+
+;Goto Zero Position
+PTP XHOME C_PTP
+PTP start_pose C_PTP
+
+repeat
+  ret=friopen(fri_rate_ms)
+  wait sec 0.5
+until $FriState == #MON
+
+
+PTP start_pose C_PTP
+
+repeat
+
+  while $fri_frm_bool[1] == false
+
+    $fri_to_bool[2] = false
+    wait sec 0.5
+
+  endwhile
+
+  ;FOLD New Control Mode requested
+  if ( $fri_to_bool[3] ) then
+
+    $MSG_T.KEY[] = "New Control Mode Requested"
+    $MSG_T.VALID = TRUE
+
+    ; TODO : add a mode 40 Joint torque
+    if ( ($fri_frm_int[2] == 10) OR ($fri_frm_int[2] == 20) OR ($fri_frm_int[2] == 30) ) then
+      PTP CLAMP_AXES($AXIS_ACT)
+      wait sec 0.2
+      ret=fristop()
+      wait for ($fristate==#MON)
+
+      ;Set new Strategy
+      $STIFFNESS.STRATEGY = $fri_frm_int[2]
+      $STIFFNESS.COMMIT = TRUE
+
+      ;FOLD Screen output
+      IF ($stiffness.strategy == 10) THEN
+        $MSG_T.KEY[] = "Joint Position Control Mode"
+      ELSE
+        IF ($stiffness.strategy == 20) THEN
+          $MSG_T.KEY[] = "Cartesian Impedance Control Mode"
+        ELSE
+          IF (($stiffness.strategy == 30) AND (isZeroStiffness($STIFFNESS) == TRUE)) THEN
+            $MSG_T.KEY[] = "Joint Torque Control Mode"
+          ELSE
+            if ($stiffness.strategy == 30) then
+              $MSG_T.KEY[] = "Joint Impedance Control Mode"
+            else
+              $MSG_T.KEY[] = "ERROR: Wrong Control Strategy"
+            endif
+          ENDIF
+        ENDIF
+      ENDIF
+      $MSG_T.VALID = TRUE
+      ;ENDFOLD (Screen output)
+
+      ;PTP $POS_ACT
+      wait sec 0.5
+
+      ret=fristart(1.0)
+      wait sec 0.2
+
+      $fri_to_bool[3] = false
+
+    endif
+  endif
+  ;ENDFOLD
+
+  ;FOLD New tool requested
+  if( $fri_frm_bool[4] ) then
+
+    $MSG_T.KEY[] = "New Tool Requested"
+    $MSG_T.VALID = TRUE
+
+    if( $fri_frm_int[3] >= 0 ) then
+      BAS(#TOOL,$fri_frm_int[3])
+      $STIFFNESS.TOOL = $TOOL
+      $STIFFNESS.BASE = $BASE
+      $STIFFNESS.COMMIT=TRUE
+    endif
+
+    $fri_to_bool[4] = false
+
+  endif
+  ;ENDFOLD
+
+  ;FOLD New base requested
+  if( $fri_frm_bool[5] ) then
+
+    $MSG_T.KEY[] = "New Base Requested"
+    $MSG_T.VALID = TRUE
+
+    if( $fri_frm_int[4] >= 0 ) then
+      BAS(#BASE,$fri_frm_int[4])
+      $STIFFNESS.TOOL = $TOOL
+      $STIFFNESS.BASE = $BASE
+      $STIFFNESS.COMMIT=TRUE
+    endif
+
+    $fri_to_bool[5] = false
+
+  endif
+  ;ENDFOLD
+
+  ;FOLD Execute PTP Command
+  if( $fri_frm_bool[6] ) then
+
+    $MSG_T.KEY[] = "New PTP Command"
+    $MSG_T.VALID = TRUE
+
+    PTP_CMD = CLAMP_AXES($AXIS_ACT)
+
+    if( $fri_frm_bool[10] ) then
+      PTP_CMD.A1 = $fri_frm_rea[10]
+      $fri_to_bool[10] = false
+    endif
+
+    if( $fri_frm_bool[11] ) then
+      PTP_CMD.A2 = $fri_frm_rea[11]
+      $fri_to_bool[11] = false
+    endif
+
+    if( $fri_frm_bool[12] ) then
+      PTP_CMD.E1 = $fri_frm_rea[12]
+      $fri_to_bool[12] = false
+    endif
+
+    if( $fri_frm_bool[13] ) then
+      PTP_CMD.A3 = $fri_frm_rea[13]
+      $fri_to_bool[13] = false
+    endif
+
+    if( $fri_frm_bool[14] ) then
+      PTP_CMD.A4 = $fri_frm_rea[14]
+      $fri_to_bool[14] = false
+    endif
+
+    if( $fri_frm_bool[15] ) then
+      PTP_CMD.A5 = $fri_frm_rea[15]
+      $fri_to_bool[15] = false
+    endif
+
+    if( $fri_frm_bool[16] ) then
+      PTP_CMD.A6 = $fri_frm_rea[16]
+      $fri_to_bool[16] = false
+    endif
+
+    PTP CLAMP_AXES(PTP_CMD) C_PTP
+
+    $fri_to_bool[5] = false
+
+  endif
+  ;ENDFOLD
+
+  if($FriState==#CMD) then
+    $fri_to_int[1] = 2
+  endif
+
+  $fri_to_bool[2] = true
+  wait for ($fri_frm_bool[2] == false)
+
+until ($fri_frm_int[1] == 3)
+
+;Need to clamp in case commands sent by FRI
+;hit joint limits
+PTP CLAMP_AXES($AXIS_ACT_MES)
+
+wait sec 0.2
+
+IF ($FriState==#CMD) THEN
+ ret=fristop()
+ WAIT FOR ($FriState==#MON)
+ENDIF
+
+$fri_to_int[1]=0
+WAIT SEC 0.5
+ret=friclose()
+
+resetSTIFFNESS()
+;move to Home-Position
+PTP { a1 0,a2 90,e1 0, a3 0,a4 0,a5 0,a6 0}
+
+END
+
+DEFFCT BOOL isZeroStiffness(s:IN)
+  DECL STIFFNESS s
+  if( (s.axisstiffness.a1 == 0) AND (s.axisstiffness.a2 == 0) AND (s.axisstiffness.e1 == 0) AND (s.axisstiffness.a3 == 0) AND (s.axisstiffness.a4 == 0) AND (s.axisstiffness.a5 == 0) AND (s.axisstiffness.a6 == 0)) then
+    return true
+  endif
+  return false
+ENDFCT
+
+DEFFCT E6AXIS TOUCH_AXIS(ax:IN)
+ E6AXIS ax
+ DECL E6AXIS an
+ an = CLAMP_AXES(ax)
+  if an.A6 <0 then
+   an.A6 = an.A6 + 0.01
+  else
+   an.A6 = an.A6 - 0.01
+  endif
+ return an
+ENDFCT
+
+DEFFCT E6AXIS CLAMP_AXES(ax:IN)
+ E6AXIS ax
+
+ DECL E6AXIS an
+
+ an.A1 = CLAMP(ax.A1, -169., 169.)
+ an.A2 = CLAMP(ax.A2,  -29., 209.)
+
+ an.E1 = CLAMP(ax.E1, -169., 169.)
+ an.A3 = CLAMP(ax.A3, -119., 119.)
+ an.A4 = CLAMP(ax.A4, -169., 169.)
+ an.A5 = CLAMP(ax.A5, -119., 119.)
+ an.A6 = CLAMP(ax.A6, -169., 169.)
+
+ RETURN an
+ENDFCT
+
+DEFFCT REAL CLAMP(v:IN, minval:IN, maxval:IN)
+ REAL v, minval, maxval
+ DECL REAL r
+
+ r = v
+
+ IF v > maxval THEN
+  r = maxval
+ ENDIF
+
+ IF v < minval THEN
+  r = minval
+ ENDIF
+
+ RETURN r
+ENDFCT
