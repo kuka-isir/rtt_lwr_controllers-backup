@@ -40,6 +40,8 @@ is_joint_torque_control_mode(false)
     this->addOperation("PTP",&KRLTool::PTP,this);
     this->addOperation("setTool",&KRLTool::setTool,this);
     this->addOperation("setBase",&KRLTool::setBase,this);
+    this->addOperation("sendSTOP2",&KRLTool::sendSTOP2,this);
+    this->addOperation("sendSTOP2_srv",&KRLTool::sendSTOP2_srv,this);
     this->addAttribute("doUpdate",do_update);
 
     for(int i=0;i<FRI_USER_SIZE;i++)
@@ -51,6 +53,17 @@ is_joint_torque_control_mode(false)
     }
 }
 
+void KRLTool::sendSTOP2()
+{
+    setBit(toKRL.boolData,STOP2,true);
+    do_update = true;
+}
+
+bool KRLTool::sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp)
+{
+    sendSTOP2();
+    return true;
+}
 void KRLTool::resetJointImpedanceGains()
 {
     for(unsigned int i=0;i<cmd.stiffness.size();++i){
@@ -130,6 +143,15 @@ bool KRLTool::configureHook()
     port_intDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/intDataFromKRL"));
     port_realDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/realDataFromKRL"));
     port_boolDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/boolDataFromKRL"));
+    
+    boost::shared_ptr<rtt_rosservice::ROSService> rosservice 
+        = this->getProvider<rtt_rosservice::ROSService>("rosservice");
+
+    if(rosservice)
+        rosservice->connect("sendSTOP2_srv",this->getName()+"/send_stop2","std_srvs/Empty");
+    else
+        RTT::log(RTT::Warning) << "ROSService not available" << RTT::endlog();
+        
     return true;
 }
 bool KRLTool::getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_srvs::TriggerResponse& resp)

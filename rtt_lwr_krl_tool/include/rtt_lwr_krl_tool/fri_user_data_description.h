@@ -12,7 +12,7 @@ enum FRI_BOOL_DATA_DESCRIPTION
     SET_BASE,
     PTP_CMD,
     LIN_CMD,
-    BOOL_EMPTY0,
+    STOP2,
     BOOL_EMPTY1,
     A1_MASK,
     A2_MASK,

@@ -13,6 +13,7 @@
 
 #include <rtt_roscomm/rtt_rostopic.h>
 #include <rtt_rosparam/rosparam.h>
+#include <rtt_roscomm/rosservice.h>
 
 #include <std_msgs/Int32.h>
 #include <std_msgs/Float32.h>
@@ -67,8 +68,9 @@ protected:
     void PTP(const vector< double >& ptp, const vector< double >& mask, bool use_radians, double vel_ptp);
     void setTool(int tool_number);
     void setBase(int base_number);
+    void sendSTOP2();
+    bool sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
     
-
     void setJointImpedanceControlMode();
     void setCartesianImpedanceControlMode();
     void setJointPositionControlMode();
@@ -93,6 +95,7 @@ protected:
     void setStiffnessZero();
 
 private:
+    void doUpdate(){ do_update = true; }
     bool do_update;
     lwr_fri::FriJointImpedance cmd;
     bool is_joint_torque_control_mode;
