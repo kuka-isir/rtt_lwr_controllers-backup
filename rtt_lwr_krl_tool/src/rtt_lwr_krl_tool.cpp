@@ -96,7 +96,7 @@ void KRLTool::setStiffnessZero()
 
 bool KRLTool::isJointPositionMode()
 {
-    return static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE]) == FRI_CTRL_POSITION;
+    return static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE]) == 10*FRI_CTRL_POSITION;
 }
 bool KRLTool::isJointTorqueMode()
 {
@@ -104,31 +104,31 @@ bool KRLTool::isJointTorqueMode()
 }
 bool KRLTool::isJointImpedanceMode()
 {
-    return static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE]) == FRI_CTRL_JNT_IMP;
+    return static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE]) == 10*FRI_CTRL_JNT_IMP;
 }
 
 bool KRLTool::isCartesianImpedanceMode()
 {
-    return static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE]) == FRI_CTRL_CART_IMP;
+    return static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE]) == 10*FRI_CTRL_CART_IMP;
 }
 
 void KRLTool::setJointPositionControlMode()
 {
-    toKRL.intData[CONTROL_MODE] = static_cast<FRI_CTRL>(FRI_CTRL_POSITION);
+    toKRL.intData[CONTROL_MODE] = 10*FRI_CTRL_POSITION;
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
     doUpdate();
 }
 
 void KRLTool::setJointImpedanceControlMode()
 {
-    toKRL.intData[CONTROL_MODE] = static_cast<FRI_CTRL>(FRI_CTRL_JNT_IMP);
+    toKRL.intData[CONTROL_MODE] = FRI_CTRL_JNT_IMP*10;
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
     doUpdate();
 }
 
 void KRLTool::setCartesianImpedanceControlMode()
 {
-    toKRL.intData[CONTROL_MODE] = static_cast<FRI_CTRL>(FRI_CTRL_CART_IMP);
+    toKRL.intData[CONTROL_MODE] = FRI_CTRL_CART_IMP*10;
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
     doUpdate();
 }
@@ -174,13 +174,13 @@ bool KRLTool::getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_
     resp.success = true;
     switch(static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE]))
     {
-        case FRI_CTRL_POSITION:
+        case FRI_CTRL_POSITION*10:
             resp.message = "Joint Position Mode - FRI_CTRL_POSITION";
             break;
-        case FRI_CTRL_JNT_IMP:
+        case FRI_CTRL_JNT_IMP*10:
             resp.message = "Joint Impedance Mode - FRI_CTRL_JNT_IMP";
             break;
-        case FRI_CTRL_CART_IMP:
+        case FRI_CTRL_CART_IMP*10:
             resp.message = "Cartesian Impedance Mode - FRI_CTRL_CART_IMP";
             break;
         case FRI_CTRL_OTHER:
@@ -188,7 +188,8 @@ bool KRLTool::getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_
             break;
         default:
             resp.success = false;
-            resp.message = "Error";
+            resp.message = "Wrong Control Mode";
+            log(Info) << "fromKRL.intData[CONTROL_MODE] = "<<static_cast<FRI_CTRL>(fromKRL.intData[CONTROL_MODE])<<endlog();
     }
     log(Info) << "KRLTool::getCurrentControlModeROSService - "<<resp.message << endlog();
     return resp.success;
@@ -332,22 +333,22 @@ void KRLTool::updateHook()
     {
         // cout <<"fromKRL.boolData : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << getBit(fromKRL.boolData,i) <<" ";cout << "]" <<endl;
 
-        if(getBit(fromKRL.boolData,KRL_ACK) && has_sent_cmd)
+        if(getBit(fromKRL.boolData,KRL_LOOP_REQUESTED) && has_sent_cmd)
         {
             noUpdate();
             has_sent_cmd = false;
             // setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
             // setBit(toKRL.boolData,KRL_ACK,false);
+            toKRL.boolData = 0;
             log(Info) << "----- ACKED   -----" << endlog();
-            for(int i=0;i<FRI_USER_SIZE;++i)
-                setBit(toKRL.boolData,i,false);
+
         }
         else if(getBit(fromKRL.boolData,1) && !has_sent_cmd)
         {
             // special case, bug or error, lets write 00
             setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
-            setBit(toKRL.boolData,KRL_ACK,false);
-            log(Error) << "getBit(fromKRL.boolData,1) && !has_sent_cmd THIS SHOULD NOT HAPPEN"<<LBR_MNJ<< endlog();
+            setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
+            log(Error) << "getBit(fromKRL.boolData,1) && !has_sent_cmd THIS SHOULD NOT HAPPEND"<< endlog();
         }
         else
         {
@@ -361,7 +362,8 @@ void KRLTool::updateHook()
 
     }else{
         setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
-        setBit(toKRL.boolData,KRL_ACK,false);
+        setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
+        toKRL.boolData = 0;
     }
 
     port_toKRL.write(toKRL);
