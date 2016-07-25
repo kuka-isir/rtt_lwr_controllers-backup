@@ -29,7 +29,7 @@
 #include <kuka_lwr_fri/friComm.h>
 #include <rtt_lwr_krl_tool/fri_user_data_description.h>
 
-template<typename T> static bool bitStatus(const T& in, unsigned int bit_number)
+template<typename T> static bool getBit(const T& in, unsigned int bit_number)
 {
     return ((in >> bit_number) & 1);
 }
@@ -65,12 +65,18 @@ protected:
     std_msgs::Float32MultiArray realDataToKRL;
     std_msgs::Float32MultiArray realDataFromKRL;
 
+    void printBool();
+    void printInt();
+    void printReal();
+    void printAll();
     void PTP(const vector< double >& ptp, const vector< double >& mask, bool use_radians, double vel_ptp);
     void setTool(int tool_number);
     void setBase(int base_number);
     void sendSTOP2();
+    void unsetSTOP2();
+    void setVELPercent(float vel_percent);
     bool sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
-    
+
     void setJointImpedanceControlMode();
     void setCartesianImpedanceControlMode();
     void setJointPositionControlMode();
@@ -96,6 +102,7 @@ protected:
 
 private:
     void doUpdate(){ do_update = true; }
+    void noUpdate(){ do_update = false;}
     bool do_update;
     lwr_fri::FriJointImpedance cmd;
     bool is_joint_torque_control_mode;

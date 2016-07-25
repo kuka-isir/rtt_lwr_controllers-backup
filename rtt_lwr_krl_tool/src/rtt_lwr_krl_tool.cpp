@@ -38,9 +38,15 @@ is_joint_torque_control_mode(false)
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this);
     this->addOperation("setStiffnessZero",&KRLTool::setStiffnessZero,this);
     this->addOperation("PTP",&KRLTool::PTP,this);
+    this->addOperation("printBool",&KRLTool::printBool,this);
+    this->addOperation("printInt",&KRLTool::printInt,this);
+    this->addOperation("printReal",&KRLTool::printReal,this);
+    this->addOperation("printAll",&KRLTool::printAll,this);
     this->addOperation("setTool",&KRLTool::setTool,this);
     this->addOperation("setBase",&KRLTool::setBase,this);
     this->addOperation("sendSTOP2",&KRLTool::sendSTOP2,this);
+    this->addOperation("unsetSTOP2",&KRLTool::unsetSTOP2,this);
+    this->addOperation("setVELPercent",&KRLTool::setVELPercent,this);
     this->addOperation("sendSTOP2_srv",&KRLTool::sendSTOP2_srv,this);
     this->addAttribute("doUpdate",do_update);
 
@@ -56,7 +62,13 @@ is_joint_torque_control_mode(false)
 void KRLTool::sendSTOP2()
 {
     setBit(toKRL.boolData,STOP2,true);
-    do_update = true;
+    doUpdate();
+}
+
+void KRLTool::unsetSTOP2()
+{
+    setBit(toKRL.boolData,STOP2,false);
+    doUpdate();
 }
 
 bool KRLTool::sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp)
@@ -104,21 +116,21 @@ void KRLTool::setJointPositionControlMode()
 {
     toKRL.intData[CONTROL_MODE] = static_cast<FRI_CTRL>(FRI_CTRL_POSITION);
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
-    do_update = true;
+    doUpdate();
 }
 
 void KRLTool::setJointImpedanceControlMode()
 {
     toKRL.intData[CONTROL_MODE] = static_cast<FRI_CTRL>(FRI_CTRL_JNT_IMP);
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
-    do_update = true;
+    doUpdate();
 }
 
 void KRLTool::setCartesianImpedanceControlMode()
 {
     toKRL.intData[CONTROL_MODE] = static_cast<FRI_CTRL>(FRI_CTRL_CART_IMP);
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
-    do_update = true;
+    doUpdate();
 }
 
 void KRLTool::setJointTorqueControlMode()
@@ -143,15 +155,18 @@ bool KRLTool::configureHook()
     port_intDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/intDataFromKRL"));
     port_realDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/realDataFromKRL"));
     port_boolDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/boolDataFromKRL"));
-    
-    boost::shared_ptr<rtt_rosservice::ROSService> rosservice 
+
+    boost::shared_ptr<rtt_rosservice::ROSService> rosservice
         = this->getProvider<rtt_rosservice::ROSService>("rosservice");
 
     if(rosservice)
+    {
         rosservice->connect("sendSTOP2_srv",this->getName()+"/send_stop2","std_srvs/Empty");
+    }
     else
+    {
         RTT::log(RTT::Warning) << "ROSService not available" << RTT::endlog();
-        
+    }
     return true;
 }
 bool KRLTool::getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_srvs::TriggerResponse& resp)
@@ -241,23 +256,53 @@ void KRLTool::PTP(const std::vector<double>& ptp,const std::vector<double>& mask
     setBit(toKRL.boolData,A5_MASK,mask[5]);
     setBit(toKRL.boolData,A6_MASK,mask[6]);
 
-    toKRL.realData[VEL_PTP] = vel_ptp;
-    
     setBit(toKRL.boolData,PTP_CMD,true);
-    do_update = true;
+    doUpdate();
 }
 
 void KRLTool::setBase(int base_number)
 {
   toKRL.intData[BASE] = base_number;
   setBit(toKRL.boolData,SET_BASE,true);
-  do_update = true;
+  doUpdate();
 }
 void KRLTool::setTool(int tool_number)
 {
   toKRL.intData[TOOL] = tool_number;
   setBit(toKRL.boolData,SET_TOOL,true);
-  do_update = true;
+  doUpdate();
+}
+void KRLTool::setVELPercent(float vel_percent)
+{
+  if( 0 <= vel_percent && vel_percent <= 100)
+  {
+    toKRL.realData[VEL_PERCENT] = vel_percent;
+    setBit(toKRL.boolData,SET_VEL,true);
+    doUpdate();
+  }else{
+    log(Error) << "VEL must be between [0:100%]"<<LBR_MNJ<< endlog();
+  }
+}
+void KRLTool::printBool()
+{
+    cout <<"toKRL.boolData   : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << getBit(toKRL.boolData,i) <<" ";cout << "]" <<endl;
+    cout <<"fromKRL.boolData : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << getBit(fromKRL.boolData,i) <<" ";cout << "]" <<endl;
+}
+void KRLTool::printInt()
+{
+    cout <<"toKRL.intData :   [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << toKRL.intData[i] <<" ";cout << "]" <<endl;
+    cout <<"fromKRL.intData : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << fromKRL.intData[i] <<" ";cout << "]" <<endl;
+}
+void KRLTool::printReal()
+{
+    cout <<"toKRL.realData :   [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << toKRL.realData[i] <<" ";cout << "]" <<endl;
+    cout <<"fromKRL.realData : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << fromKRL.realData[i] <<" ";cout << "]" <<endl;
+}
+void KRLTool::printAll()
+{
+    printBool();
+    printInt();
+    printReal();
 }
 
 void KRLTool::updateHook()
@@ -269,7 +314,7 @@ void KRLTool::updateHook()
 //         for(unsigned i=0;i<FRI_USER_SIZE && i<intDataToKRL.data.size();++i)
 //             if(intDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
 //                 toKRL.intData[i] = static_cast<fri_int32_t>(intDataToKRL.data[i]);
-//         do_update = true;
+//         doUpdate();
 //     }
 //
 //     // Incoming ROS Float message
@@ -278,39 +323,41 @@ void KRLTool::updateHook()
 //         for(unsigned i=0;i<FRI_USER_SIZE && i<realDataToKRL.data.size();++i)
 //             if(realDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
 //                 toKRL.realData[i] = static_cast<fri_float_t>(realDataToKRL.data[i]);
-//         do_update = true;
+//         doUpdate();
 //     }
 
     // To KRL
 
     if(do_update)
     {
-        cout <<"fromKRL.boolData : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << bitStatus(fromKRL.boolData,i) <<" ";cout << "]" <<endl;
+        // cout <<"fromKRL.boolData : [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << getBit(fromKRL.boolData,i) <<" ";cout << "]" <<endl;
 
-        if(bitStatus(fromKRL.boolData,KRL_ACK) && has_sent_cmd)
+        if(getBit(fromKRL.boolData,KRL_ACK) && has_sent_cmd)
         {
-            do_update = false;
+            noUpdate();
             has_sent_cmd = false;
-            setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
-            setBit(toKRL.boolData,KRL_ACK,false);
-            cout <<"----- ACKED   -----" << endl;
+            // setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
+            // setBit(toKRL.boolData,KRL_ACK,false);
+            log(Info) << "----- ACKED   -----" << endlog();
+            for(int i=0;i<FRI_USER_SIZE;++i)
+                setBit(toKRL.boolData,i,false);
         }
-        else if(bitStatus(fromKRL.boolData,1) && !has_sent_cmd)
+        else if(getBit(fromKRL.boolData,1) && !has_sent_cmd)
         {
             // special case, bug or error, lets write 00
             setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
             setBit(toKRL.boolData,KRL_ACK,false);
-            cout <<"----- Wait    -----" << endl;
+            log(Error) << "getBit(fromKRL.boolData,1) && !has_sent_cmd THIS SHOULD NOT HAPPEN"<<LBR_MNJ<< endlog();
         }
         else
         {
             // Request an update
             setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
-            cout <<"----- WRITING -----" << endl;
+            // cout <<"----- WRITING -----" << endl;
             has_sent_cmd = true;
         }
 
-        cout <<"toKRL.boolData :   [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << bitStatus(toKRL.boolData,i) <<" ";cout << "]" <<endl;
+        // cout <<"toKRL.boolData :   [ ";for(int i=0;i<FRI_USER_SIZE;++i) cout << getBit(toKRL.boolData,i) <<" ";cout << "]" <<endl;
 
     }else{
         setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
@@ -333,7 +380,7 @@ void KRLTool::updateHook()
 //     for(int i=0;i<FRI_USER_SIZE;++i)
 //         realDataFromKRL.data[i] = fromKRL.realData[i];
 //     for(int i=0;i<FRI_USER_SIZE;++i)
-//         boolDataFromKRL.data[i] = bitStatus(fromKRL.boolData , i);
+//         boolDataFromKRL.data[i] = getBit(fromKRL.boolData , i);
 //
 //     port_intDataFromKRL_ros.write(intDataFromKRL);
 //     port_realDataFromKRL_ros.write(realDataFromKRL);

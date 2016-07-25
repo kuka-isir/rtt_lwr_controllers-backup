@@ -1,5 +1,5 @@
 &ACCESS RVP
-&REL 37
+&REL 42
 &COMMENT ISIR-CNRS 2016
 &PARAM tool_number = 10
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
@@ -7,7 +7,7 @@
 &PARAM fri_rate_ms = 1.0
 &PARAM base_number = 0
 &PARAM EDITMASK = *
-DEF friisir2_aircelle( )
+DEF fri_isir_control( )
 ;FOLD ProgramInfo
 ; Copyright ISIR-CNRS 2016
 ; Author: Antoine Hoarau
@@ -19,16 +19,20 @@ DECL FRISTATE ret
 REAL fri_rate_ms
 INT  tool_number
 EXT  resetSTIFFNESS ( )
+EXT do_stop2()
+EXT set_vel()
 DECL E6AXIS start_pose
 DECL E6AXIS PTP_CMD
 ;ENDFOLD DECL Variables
 ;FOLD INI
 ;FOLD BASISTECH INI
- GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
- INTERRUPT ON 3
- BAS (#INITMOV,0 )
- GLOBAL INTERRUPT DECL 4 WHEN $FRI_FRM_BOOL[8]==TRUE DO IR_STOPM()
- INTERRUPT ON 4
+GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
+INTERRUPT ON 3
+BAS (#INITMOV,0 )
+GLOBAL INTERRUPT DECL 4 WHEN $FRI_FRM_BOOL[8]==TRUE DO do_stop2()
+INTERRUPT ON 4
+GLOBAL INTERRUPT DECL 5 WHEN $FRI_FRM_BOOL[9]==TRUE DO set_vel()
+INTERRUPT ON 5
 ;ENDFOLD (BASISTECH INI)
 ;FOLD USER INI
   ;FOLD BCO run to current position
@@ -51,9 +55,6 @@ DECL E6AXIS PTP_CMD
   ;ENDFOLD
 ;ENDFOLD (USER INI)
 ;ENDFOLD (INI)
-
-;FOLD Variable information
-;ENDFOLD Variable information
 
 ; Script Parameters
 tool_number = 5
@@ -85,8 +86,7 @@ repeat
   wait sec 0.5
 until $FriState == #MON
 
-
-PTP start_pose C_PTP
+PTP start_pose
 
 repeat
 
@@ -141,7 +141,7 @@ repeat
       ret=fristart(1.0)
       wait sec 0.2
 
-      $fri_to_bool[3] = false
+      $fri_to_bool[3] = true
 
     endif
   endif
@@ -160,7 +160,7 @@ repeat
       $STIFFNESS.COMMIT=TRUE
     endif
 
-    $fri_to_bool[4] = false
+    $fri_to_bool[4] = true
 
   endif
   ;ENDFOLD
@@ -178,7 +178,7 @@ repeat
       $STIFFNESS.COMMIT=TRUE
     endif
 
-    $fri_to_bool[5] = false
+    $fri_to_bool[5] = true
 
   endif
   ;ENDFOLD
@@ -193,42 +193,42 @@ repeat
 
     if( $fri_frm_bool[10] ) then
       PTP_CMD.A1 = $fri_frm_rea[10]
-      $fri_to_bool[10] = false
+      $fri_to_bool[10] = true
     endif
 
     if( $fri_frm_bool[11] ) then
       PTP_CMD.A2 = $fri_frm_rea[11]
-      $fri_to_bool[11] = false
+      $fri_to_bool[11] = true
     endif
 
     if( $fri_frm_bool[12] ) then
       PTP_CMD.E1 = $fri_frm_rea[12]
-      $fri_to_bool[12] = false
+      $fri_to_bool[12] = true
     endif
 
     if( $fri_frm_bool[13] ) then
       PTP_CMD.A3 = $fri_frm_rea[13]
-      $fri_to_bool[13] = false
+      $fri_to_bool[13] = true
     endif
 
     if( $fri_frm_bool[14] ) then
       PTP_CMD.A4 = $fri_frm_rea[14]
-      $fri_to_bool[14] = false
+      $fri_to_bool[14] = true
     endif
 
     if( $fri_frm_bool[15] ) then
       PTP_CMD.A5 = $fri_frm_rea[15]
-      $fri_to_bool[15] = false
+      $fri_to_bool[15] = true
     endif
 
     if( $fri_frm_bool[16] ) then
       PTP_CMD.A6 = $fri_frm_rea[16]
-      $fri_to_bool[16] = false
+      $fri_to_bool[16] = true
     endif
 
     PTP CLAMP_AXES(PTP_CMD) C_PTP
 
-    $fri_to_bool[5] = false
+    $fri_to_bool[5] = true
 
   endif
   ;ENDFOLD
