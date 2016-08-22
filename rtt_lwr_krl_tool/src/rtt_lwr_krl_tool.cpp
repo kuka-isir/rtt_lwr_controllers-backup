@@ -40,6 +40,31 @@ is_joint_torque_control_mode(false)
         fromKRL.intData[i] = toKRL.intData[i] =  0;
         fromKRL.realData[i] = toKRL.realData[i] = 0.0;
     }
+    // Add action server ports to this task's root service
+    ptp_action_server_.addPorts(this->provides());
+
+    // Bind action server goal and cancel callbacks (see below)
+    ptp_action_server_.registerGoalCallback(boost::bind(&KRLTool::PTPgoalCallback, this, _1));
+    ptp_action_server_.registerCancelCallback(boost::bind(&KRLTool::PTPcancelCallback, this, _1));
+}
+// Called by ptp_action_server_ when a new goal is received
+void KRLTool::PTPgoalCallback(PTPGoalHandle gh) {
+  if(gh.ptp_goal_deg.size() != LBR_MNJ)
+  {
+      log(Error) << "ptp goal size is wrong ("<<gh.ptp_goal_deg.size()<<", but should be "<<LBR_MNJ<<")"<<endlog();
+      return;
+  }
+  std::vector<double> ptp_cmd(LBR_MNJ,0.0);
+  std::vector<bool> ptp_mask(LBR_MNJ,false);
+  for(int i=0;i<ptp_cmd.size() && i<gh.ptp_goal_deg.size();++i)
+  {
+      ptp_cmd[i] = gh.ptp_goal_deg[i];
+  }
+}
+
+// Called by ptp_action_server_ when a goal is cancelled / preempted
+void KRLTool::PTPcancelCallback(PTPGoalHandle gh) {
+  // Handle preemption here
 }
 
 void KRLTool::resetJointImpedanceGains()
@@ -162,7 +187,11 @@ bool KRLTool::setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest&
     log(Info) << "KRLTool::setCartesianImpedanceControlModeROSService" << endlog();
     setCartesianImpedanceControlMode();
 }
-
+bool KRLTool::startHook() {
+  // Start action server
+  ptp_action_server_.start();
+  return true;
+}
 void KRLTool::updateHook()
 {
     if(port_fromKRL.read(fromKRL) != NewData)

@@ -26,7 +26,8 @@
 
 #include <lwr_fri/FriJointImpedance.h>
 #include <kuka_lwr_fri/friComm.h>
-
+#include <krl_msgs/PTPAction.h>
+#include <rtt_actionlib/rtt_action_server.h>
 namespace lwr{
     
     static const size_t CONTROL_MODE    = 1;
@@ -34,11 +35,18 @@ namespace lwr{
     static const int NO_UPDATE = -9999;
     
 class KRLTool : public RTT::TaskContext{
+private:
+    typedef actionlib::ServerGoalHandle<krl_msgs::PTPAction> PTPGoalHandle;
+    rtt_actionlib::RTTActionServer<krl_msgs::PTPAction> ptp_action_server_;
+
 public:
     KRLTool(const std::string& name);
     virtual ~KRLTool(){};
     void updateHook();
     bool configureHook();
+    bool startHook();
+    void PTPgoalCallback(PTPGoalHandle gh);
+    void PTPcancelCallback(PTPGoalHandle gh);
 protected:
     RTT::OutputPort<lwr_fri::FriJointImpedance> port_JointImpedanceCommand;
     RTT::InputPort<tFriKrlData> port_fromKRL;

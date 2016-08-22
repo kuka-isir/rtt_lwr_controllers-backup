@@ -1,0 +1,9 @@
+# Define the goal
+float32[] ptp_goal_deg
+bool[] ptp_mask
+---
+# Define the result
+bool success
+---
+# Define a feedback message
+bool is_running
