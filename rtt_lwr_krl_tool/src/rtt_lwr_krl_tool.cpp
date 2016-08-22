@@ -81,7 +81,7 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
     std::vector<double> ptp_mask(LBR_MNJ,0);
     for(int i=0;i<ptp_cmd.size();++i)
     {
-        if(ptp_mask[i])
+        if(gh.getGoal()->ptp_mask[i])
         {
             ptp_mask[i] = 1;
             ptp_cmd[i] = gh.getGoal()->ptp_goal_rad[i];
