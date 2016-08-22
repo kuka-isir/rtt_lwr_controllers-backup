@@ -16,6 +16,7 @@
   <run_depend>rtt_lwr_krl_tool</run_depend>
   <run_depend>rtt_lwr_jt_controller</run_depend>
   <run_depend>rtt_state_publisher</run_depend>
+  <run_depend>krl_msgs</run_depend>
   
   <export>
   </export>
