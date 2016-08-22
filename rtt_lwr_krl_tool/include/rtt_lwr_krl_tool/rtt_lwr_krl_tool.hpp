@@ -27,11 +27,10 @@
 
 #include <lwr_fri/FriJointImpedance.h>
 #include <kuka_lwr_fri/friComm.h>
+#include <rtt_lwr_krl_tool/fri_user_data_description.h>
 
 #include <krl_msgs/PTPAction.h>
 #include <rtt_actionlib/rtt_action_server.h>
-
-#include <rtt_lwr_krl_tool/fri_user_data_description.h>
 
 template<typename T> static bool getBit(const T& in, unsigned int bit_number)
 {
@@ -70,32 +69,49 @@ protected:
     std_msgs::Int32MultiArray intDataFromKRL;
     RTT::InputPort<std_msgs::Float32MultiArray> port_realDataToKRL_ros;
     RTT::OutputPort<std_msgs::Float32MultiArray> port_realDataFromKRL_ros;
+    RTT::OutputPort<std_msgs::ByteMultiArray> port_boolDataFromKRL_ros;
+    std_msgs::ByteMultiArray boolDataFromKRL;
     std_msgs::Float32MultiArray realDataToKRL;
     std_msgs::Float32MultiArray realDataFromKRL;
-    
+
+    void printBool();
+    void printInt();
+    void printReal();
+    void printAll();
+    void PTP(const vector< double >& ptp, const vector< double >& mask, bool use_radians, double vel_ptp);
+    void setTool(int tool_number);
+    void setBase(int base_number);
+    void sendSTOP2();
+    void unsetSTOP2();
+    void setVELPercent(float vel_percent);
+    bool sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
+
     void setJointImpedanceControlMode();
     void setCartesianImpedanceControlMode();
     void setJointPositionControlMode();
     void setJointTorqueControlMode();
-    
+
     bool setJointImpedanceControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
     bool setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
     bool setJointPositionControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
     bool setJointTorqueControlModeROSService(std_srvs::EmptyRequest& req,std_srvs::EmptyResponse& resp);
-    
+
     bool getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_srvs::TriggerResponse& resp);
-        
+    bool getCurrentControlMode();
+
     bool isJointPositionMode();
     bool isJointTorqueMode();
     bool isCartesianImpedanceMode();
     bool isJointImpedanceMode();
-    
+
     RTT::OutputPort<lwr_fri::FriJointImpedance> port_JointImpedanceCommand;
-    
+
     void resetJointImpedanceGains();
     void setStiffnessZero();
-    
-private:    
+
+private:
+    void doUpdate(){ do_update = true; }
+    void noUpdate(){ do_update = false;}
     bool do_update;
     lwr_fri::FriJointImpedance cmd;
     bool is_joint_torque_control_mode;
@@ -105,3 +121,4 @@ private:
 }
 ORO_CREATE_COMPONENT(lwr::KRLTool)
 #endif
+

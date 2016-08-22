@@ -65,22 +65,29 @@ is_joint_torque_control_mode(false)
     ptp_action_server_.registerCancelCallback(boost::bind(&KRLTool::PTPcancelCallback, this, _1));
 }
 // Called by ptp_action_server_ when a new goal is received
-void KRLTool::PTPgoalCallback(PTPGoalHandle gh) {
-  if(gh.ptp_goal_deg.size() != LBR_MNJ)
-  {
-      log(Error) << "ptp goal size is wrong ("<<gh.ptp_goal_deg.size()<<", but should be "<<LBR_MNJ<<")"<<endlog();
-      return;
-  }
-  std::vector<double> ptp_cmd(LBR_MNJ,0.0);
-  std::vector<bool> ptp_mask(LBR_MNJ,false);
-  for(int i=0;i<ptp_cmd.size() && i<gh.ptp_goal_deg.size();++i)
-  {
-      ptp_cmd[i] = gh.ptp_goal_deg[i];
-  }
+void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
+{
+    if(gh.getGoal()->ptp_goal_deg.size() != LBR_MNJ)
+    {
+        log(Error) << "ptp goal size is wrong ("<<gh.getGoal()->ptp_goal_deg.size()<<", but should be "<<LBR_MNJ<<")"<<endlog();
+        return;
+    }
+    if(gh.getGoal()->ptp_goal_deg.size() != gh.getGoal()->ptp_mask.size())
+    {
+        log(Warning) << "The mask is not the same size as the goal ("<<gh.getGoal()->ptp_goal_deg.size()<<" vs "<<gh.getGoal()->ptp_mask.size()<<")"<<endlog();
+        return;
+    }
+    std::vector<double> ptp_cmd(LBR_MNJ,0.0);
+    std::vector<bool> ptp_mask(LBR_MNJ,false);
+    for(int i=0;i<ptp_cmd.size() && i<gh.getGoal()->ptp_goal_deg.size();++i)
+    {
+        ptp_cmd[i] = gh.getGoal()->ptp_goal_deg[i];
+    }
 }
 
 // Called by ptp_action_server_ when a goal is cancelled / preempted
-void KRLTool::PTPcancelCallback(PTPGoalHandle gh) {
+void KRLTool::PTPcancelCallback(PTPGoalHandle gh)
+{
   // Handle preemption here
 }
 void KRLTool::sendSTOP2()
