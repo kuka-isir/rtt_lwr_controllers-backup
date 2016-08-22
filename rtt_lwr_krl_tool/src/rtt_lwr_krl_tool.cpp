@@ -412,10 +412,6 @@ void KRLTool::updateHook()
 
     port_toKRL.write(toKRL);
 
-    if(do_update){
-        port_toKRL.write(toKRL);
-        do_update = false;
-    }
     // Joint Impedance Commands
     if(do_send_imp_cmd){
         port_JointImpedanceCommand.write(cmd);
