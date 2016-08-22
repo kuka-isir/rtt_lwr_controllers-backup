@@ -58,7 +58,7 @@ is_joint_torque_control_mode(false)
         fromKRL.realData[i] = toKRL.realData[i] = 0.0;
     }
     // Add action server ports to this task's root service
-    ptp_action_server_.addPorts(this->provides());
+    ptp_action_server_.addPorts(this->provides("PTP"));
 
     // Bind action server goal and cancel callbacks (see below)
     ptp_action_server_.registerGoalCallback(boost::bind(&KRLTool::PTPgoalCallback, this, _1));
@@ -67,22 +67,28 @@ is_joint_torque_control_mode(false)
 // Called by ptp_action_server_ when a new goal is received
 void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
 {
-    if(gh.getGoal()->ptp_goal_deg.size() != LBR_MNJ)
+    if(gh.getGoal()->ptp_goal_rad.size() != LBR_MNJ)
     {
-        log(Error) << "ptp goal size is wrong ("<<gh.getGoal()->ptp_goal_deg.size()<<", but should be "<<LBR_MNJ<<")"<<endlog();
+        log(Error) << "ptp goal size is wrong ("<<gh.getGoal()->ptp_goal_rad.size()<<", but should be "<<LBR_MNJ<<")"<<endlog();
         return;
     }
-    if(gh.getGoal()->ptp_goal_deg.size() != gh.getGoal()->ptp_mask.size())
+    if(gh.getGoal()->ptp_goal_rad.size() != gh.getGoal()->ptp_mask.size())
     {
-        log(Warning) << "The mask is not the same size as the goal ("<<gh.getGoal()->ptp_goal_deg.size()<<" vs "<<gh.getGoal()->ptp_mask.size()<<")"<<endlog();
+        log(Warning) << "The mask is not the same size as the goal ("<<gh.getGoal()->ptp_goal_rad.size()<<" vs "<<gh.getGoal()->ptp_mask.size()<<")"<<endlog();
         return;
     }
     std::vector<double> ptp_cmd(LBR_MNJ,0.0);
-    std::vector<bool> ptp_mask(LBR_MNJ,false);
-    for(int i=0;i<ptp_cmd.size() && i<gh.getGoal()->ptp_goal_deg.size();++i)
+    std::vector<double> ptp_mask(LBR_MNJ,0);
+    for(int i=0;i<ptp_cmd.size();++i)
     {
-        ptp_cmd[i] = gh.getGoal()->ptp_goal_deg[i];
+        if(ptp_mask[i])
+        {
+            ptp_mask[i] = 1;
+            ptp_cmd[i] = gh.getGoal()->ptp_goal_rad[i];
+        }
     }
+    log(Warning) << "Sending new PTP Command "<<endlog();
+    this->PTP(ptp_cmd,ptp_mask,true,gh.getGoal()->vel_percent);
 }
 
 // Called by ptp_action_server_ when a goal is cancelled / preempted

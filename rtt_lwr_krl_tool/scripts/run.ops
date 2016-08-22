@@ -3,3 +3,9 @@ runScript(ros.find("lwr_utils")+"/scripts/utils.ops")
 
 loadRobot(getRobotName(),isSim(),true)
 loadStatePublisher(true)
+
+import("rtt_ros")
+ros.import("rtt_actionlib")
+ros.import("rtt_krl_msgs")
+loadService(getRobotName()+"_krl_tool","actionlib")
+scripting.eval(getRobotName()+"_krl_tool.actionlib.connectSub(\"PTP\",\"ptp\")")
