@@ -119,7 +119,7 @@ void KRLTool::LINgoalCallback(LINGoalHandle gh)
     {
         log(Warning) << "Sending new LIN Command "<<endlog();
     }
-    Linear(gh.getGoal()->XYZ,gh.getGoal()->XYZ_mask,gh.getGoal()->ABC,gh.getGoal()->ABC_mask,gh.getGoal()->use_relative);
+    Linear(gh.getGoal()->XYZ,gh.getGoal()->ABC,gh.getGoal()->use_relative);
 }
 
 void KRLTool::LINcancelCallback(LINGoalHandle gh)
@@ -130,23 +130,17 @@ void KRLTool::LINcancelCallback(LINGoalHandle gh)
 void KRLTool::LIN(const geometry_msgs::Vector3& XYZ_meters,
     const geometry_msgs::Vector3& ABC_rad)
 {
-    geometry_msgs::Vector3 ok_mask;
-    ok_mask.x = ok_mask.y = ok_mask.z = 1;
-    Linear(XYZ_meters,ok_mask,ABC_rad,ok_mask,false);
+    Linear(XYZ_meters,ABC_rad,false);
 }
 
 void KRLTool::LIN_REL(const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& XYZ_mask,
-    const geometry_msgs::Vector3& ABC_rad,
-    const geometry_msgs::Vector3& ABC_mask)
+    const geometry_msgs::Vector3& ABC_rad)
 {
-    Linear(XYZ_meters,XYZ_mask,ABC_rad,ABC_mask,true);
+    Linear(XYZ_meters,ABC_rad,true);
 }
 
 void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& XYZ_mask,
     const geometry_msgs::Vector3& ABC_rad,
-    const geometry_msgs::Vector3& ABC_mask,
     bool use_lin_rel)
 {
     bool use_radians = true;
@@ -156,7 +150,7 @@ void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
     if(use_radians)
         conv = 180.0/3.14159265359;
 
-    setBit(toKRL.boolData,PTP_CMD,true);
+    setBit(toKRL.boolData,LIN_CMD,true);
     toKRL.intData[LIN_CMD_TYPE] = use_lin_rel;
     toKRL.realData[X] = XYZ_meters.x * 1000.0;
     toKRL.realData[Y] = XYZ_meters.y * 1000.0;
@@ -482,12 +476,12 @@ void KRLTool::updateHook()
             }
 //             toKRL.boolData = 0;
             log(Info) << "----- ACKED   -----" << endlog();
-            
+
             actionlib_msgs::GoalStatus goal_status;
             goal_status.status = actionlib_msgs::GoalStatus::SUCCEEDED;
             krl_msgs::LINResult lin_res;
             krl_msgs::PTPResult ptp_res;
-            
+
             lin_action_server_.publishResult(goal_status,lin_res);
             ptp_action_server_.publishResult(goal_status,ptp_res);
 

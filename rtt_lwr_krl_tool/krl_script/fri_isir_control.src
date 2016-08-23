@@ -1,5 +1,5 @@
 &ACCESS RVP
-&REL 42
+&REL 45
 &COMMENT ISIR-CNRS 2016
 &PARAM tool_number = 10
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
@@ -15,6 +15,7 @@ DEF fri_isir_control( )
 
 ;FOLD Variables declaration
 INT i
+BOOL use_rel
 DECL FRISTATE ret
 REAL fri_rate_ms
 INT  tool_number
@@ -25,6 +26,7 @@ EXT do_stop2()
 EXT set_vel()
 DECL E6AXIS start_pose
 DECL E6AXIS PTP_CMD
+DECL E6POS LIN_CMD
 ;ENDFOLD DECL Variables
 ;FOLD INI
 ;FOLD BASISTECH INI
@@ -186,10 +188,21 @@ repeat
   ;FOLD Execute PTP Command
   if( $fri_frm_bool[6] ) then
 
-    $MSG_T.KEY[] = "New PTP Command"
-    $MSG_T.VALID = TRUE
+    use_rel = ($fri_frm_int[6] <> 0)
 
-    PTP_CMD = CLAMP_AXES($AXIS_ACT)
+    if( use_rel ) then
+      $MSG_T.KEY[] = "New PTP_REL Command"
+      $MSG_T.VALID = TRUE
+    else
+      $MSG_T.KEY[] = "New PTP Command"
+      $MSG_T.VALID = TRUE
+    endif
+
+    if(use_rel) then
+      PTP_CMD = {A1 0.0, A2 0.0, E1 0.0, A3 0.0, A4 0.0, A5 0.0, A6 0.0}
+    else
+      PTP_CMD = CLAMP_AXES($AXIS_ACT)
+    endif
 
     if( $fri_frm_bool[10] ) then
       PTP_CMD.A1 = $fri_frm_rea[10]
@@ -226,12 +239,75 @@ repeat
       $fri_to_bool[16] = true
     endif
 
-    PTP CLAMP_AXES(PTP_CMD)
+    if(use_rel) then
+      PTP_REL PTP_CMD
+    else
+      PTP CLAMP_AXES(PTP_CMD)
+    endif
 
-    $fri_to_bool[5] = true
+    $fri_to_bool[6] = true
 
   endif
   ;ENDFOLD
+
+  ;FOLD Execute LIN Command
+  if( $fri_frm_bool[7] ) then
+
+    use_rel = ($fri_frm_int[7] <> 0)
+
+    if( use_rel ) then
+      $MSG_T.KEY[] = "New LIN_REL Command"
+      $MSG_T.VALID = TRUE
+    else
+      $MSG_T.KEY[] = "New LIN Command"
+      $MSG_T.VALID = TRUE
+    endif
+
+    if(use_rel) then
+      LIN_CMD = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
+    endif
+
+    if( $fri_frm_bool[10] OR use_rel) then
+      LIN_CMD.X = $fri_frm_rea[1]
+      $fri_to_bool[10] = true
+    endif
+
+    if( $fri_frm_bool[11] OR use_rel ) then
+      LIN_CMD.Y = $fri_frm_rea[2]
+      $fri_to_bool[11] = true
+    endif
+
+    if( $fri_frm_bool[12] OR use_rel ) then
+      LIN_CMD.Z = $fri_frm_rea[3]
+      $fri_to_bool[12] = true
+    endif
+
+    if( $fri_frm_bool[13] OR use_rel ) then
+      LIN_CMD.A = $fri_frm_rea[4]
+      $fri_to_bool[13] = true
+    endif
+
+    if( $fri_frm_bool[14] OR use_rel ) then
+      LIN_CMD.B = $fri_frm_rea[5]
+      $fri_to_bool[14] = true
+    endif
+
+    if( $fri_frm_bool[15] OR use_rel ) then
+      LIN_CMD.C = $fri_frm_rea[6]
+      $fri_to_bool[15] = true
+    endif
+
+    if( use_rel ) then
+      LIN_REL LIN_CMD
+    else
+      LIN LIN_CMD
+    endif
+
+    $fri_to_bool[7] = true
+
+  endif
+  ;ENDFOLD
+
 
   $fri_to_bool[1] = true
   wait for ($fri_frm_bool[1] == false)
