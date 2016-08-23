@@ -22,6 +22,8 @@
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/Int32MultiArray.h>
 
+#include <geometry_msgs/Vector3.h>
+
 #include <std_srvs/Trigger.h>
 #include <std_srvs/Empty.h>
 
@@ -30,6 +32,8 @@
 #include <rtt_lwr_krl_tool/fri_user_data_description.h>
 
 #include <krl_msgs/PTPAction.h>
+#include <krl_msgs/LINAction.h>
+
 #include <rtt_actionlib/rtt_action_server.h>
 
 template<typename T> static bool getBit(const T& in, unsigned int bit_number)
@@ -47,17 +51,32 @@ namespace lwr{
 static const int ROS_MASK_NO_UPDATE = -9999;
 
 class KRLTool : public RTT::TaskContext{
+
 private:
+    // PTP + PTP_REL action
     typedef actionlib::ServerGoalHandle<krl_msgs::PTPAction> PTPGoalHandle;
     rtt_actionlib::RTTActionServer<krl_msgs::PTPAction> ptp_action_server_;
+    rtt_actionlib::RTTActionServer<krl_msgs::PTPAction> ptp_rel_action_server_;
+
+    // LIN + LIN_REL action
+    typedef actionlib::ServerGoalHandle<krl_msgs::LINAction> LINGoalHandle;
+    rtt_actionlib::RTTActionServer<krl_msgs::LINAction> lin_action_server_;
+    rtt_actionlib::RTTActionServer<krl_msgs::LINAction> lin_rel_action_server_;
+
 public:
     KRLTool(const std::string& name);
     virtual ~KRLTool(){};
     void updateHook();
     bool configureHook();
     bool startHook();
+
+// Actionlib Callbacks
+protected:
     void PTPgoalCallback(PTPGoalHandle gh);
     void PTPcancelCallback(PTPGoalHandle gh);
+    void LINgoalCallback(LINGoalHandle gh);
+    void LINcancelCallback(LINGoalHandle gh);
+
 protected:
     RTT::InputPort<tFriKrlData> port_fromKRL;
     RTT::OutputPort<tFriKrlData> port_toKRL;
@@ -78,7 +97,14 @@ protected:
     void printInt();
     void printReal();
     void printAll();
-    void PTP(const vector< double >& ptp, const vector< double >& mask, bool use_radians, double vel_ptp);
+    void PTP(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians, double vel_ptp);
+private: void PointToPoint(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians,bool use_ptp_rel, double vel_ptp);
+protected:
+    void PTP_REL(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians, double vel_ptp);
+    void LIN_REL(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& XYZ_mask, const geometry_msgs::Vector3& ABC_rad, const geometry_msgs::Vector3& ABC_mask);
+    void LIN(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& ABC_rad);
+private: void Linear(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& XYZ_mask, const geometry_msgs::Vector3& ABC_rad, const geometry_msgs::Vector3& ABC_mask,bool use_lin_rel);
+protected:
     void setTool(int tool_number);
     void setBase(int base_number);
     void sendSTOP2();
@@ -121,4 +147,3 @@ private:
 }
 ORO_CREATE_COMPONENT(lwr::KRLTool)
 #endif
-

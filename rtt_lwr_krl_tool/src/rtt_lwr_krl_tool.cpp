@@ -38,6 +38,9 @@ is_joint_torque_control_mode(false)
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this);
     this->addOperation("setStiffnessZero",&KRLTool::setStiffnessZero,this);
     this->addOperation("PTP",&KRLTool::PTP,this);
+    this->addOperation("PTP_REL",&KRLTool::PTP_REL,this);
+    this->addOperation("LIN",&KRLTool::LIN,this);
+    this->addOperation("LIN_REL",&KRLTool::LIN_REL,this);
     this->addOperation("printBool",&KRLTool::printBool,this);
     this->addOperation("printInt",&KRLTool::printInt,this);
     this->addOperation("printReal",&KRLTool::printReal,this);
@@ -59,10 +62,13 @@ is_joint_torque_control_mode(false)
     }
     // Add action server ports to this task's root service
     ptp_action_server_.addPorts(this->provides("PTP"));
+    lin_action_server_.addPorts(this->provides("LIN"));
 
     // Bind action server goal and cancel callbacks (see below)
     ptp_action_server_.registerGoalCallback(boost::bind(&KRLTool::PTPgoalCallback, this, _1));
     ptp_action_server_.registerCancelCallback(boost::bind(&KRLTool::PTPcancelCallback, this, _1));
+    lin_action_server_.registerGoalCallback(boost::bind(&KRLTool::LINgoalCallback, this, _1));
+    lin_action_server_.registerCancelCallback(boost::bind(&KRLTool::LINcancelCallback, this, _1));
 }
 // Called by ptp_action_server_ when a new goal is received
 void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
@@ -87,15 +93,80 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
             ptp_cmd[i] = gh.getGoal()->ptp_goal_rad[i];
         }
     }
-    log(Warning) << "Sending new PTP Command "<<endlog();
-    this->PTP(ptp_cmd,ptp_mask,true,gh.getGoal()->vel_percent);
+    if(gh.getGoal()->use_relative)
+    {
+        log(Warning) << "Sending new PTP_REL Command "<<endlog();
+    }
+    else
+    {
+        log(Warning) << "Sending new PTP Command "<<endlog();
+    }
+    this->PointToPoint(ptp_cmd,ptp_mask,false,gh.getGoal()->use_relative,gh.getGoal()->vel_percent);
 }
 
-// Called by ptp_action_server_ when a goal is cancelled / preempted
 void KRLTool::PTPcancelCallback(PTPGoalHandle gh)
 {
-  // Handle preemption here
+    log(Warning) << "You asked to cancel the goal"<<endlog();
 }
+
+void KRLTool::LINgoalCallback(LINGoalHandle gh)
+{
+    if(gh.getGoal()->use_relative)
+    {
+        log(Warning) << "Sending new LIN_REL Command "<<endlog();
+    }
+    else
+    {
+        log(Warning) << "Sending new LIN Command "<<endlog();
+    }
+    Linear(gh.getGoal()->XYZ,gh.getGoal()->XYZ_mask,gh.getGoal()->ABC,gh.getGoal()->ABC_mask,gh.getGoal()->use_relative);
+}
+
+void KRLTool::LINcancelCallback(LINGoalHandle gh)
+{
+
+}
+
+void KRLTool::LIN(const geometry_msgs::Vector3& XYZ_meters,
+    const geometry_msgs::Vector3& ABC_rad)
+{
+    geometry_msgs::Vector3 ok_mask;
+    ok_mask.x = ok_mask.y = ok_mask.z = 1;
+    Linear(XYZ_meters,ok_mask,ABC_rad,ok_mask,false);
+}
+
+void KRLTool::LIN_REL(const geometry_msgs::Vector3& XYZ_meters,
+    const geometry_msgs::Vector3& XYZ_mask,
+    const geometry_msgs::Vector3& ABC_rad,
+    const geometry_msgs::Vector3& ABC_mask)
+{
+    Linear(XYZ_meters,XYZ_mask,ABC_rad,ABC_mask,true);
+}
+
+void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
+    const geometry_msgs::Vector3& XYZ_mask,
+    const geometry_msgs::Vector3& ABC_rad,
+    const geometry_msgs::Vector3& ABC_mask,
+    bool use_lin_rel)
+{
+    bool use_radians = true;
+
+    double conv = 1.0;
+
+    if(use_radians)
+        conv = 180.0/3.14159265359;
+
+    setBit(toKRL.boolData,PTP_CMD,true);
+    toKRL.intData[LIN_CMD_TYPE] = use_lin_rel;
+    toKRL.realData[X] = XYZ_meters.x * 1000.0;
+    toKRL.realData[Y] = XYZ_meters.y * 1000.0;
+    toKRL.realData[Z] = XYZ_meters.z * 1000.0;
+    toKRL.realData[A] = ABC_rad.x * conv;
+    toKRL.realData[B] = ABC_rad.y * conv;
+    toKRL.realData[C] = ABC_rad.z * conv;
+    doUpdate();
+}
+
 void KRLTool::sendSTOP2()
 {
     setBit(toKRL.boolData,STOP2,true);
@@ -260,8 +331,26 @@ bool KRLTool::setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest&
     log(Info) << "KRLTool::setCartesianImpedanceControlModeROSService" << endlog();
     setCartesianImpedanceControlMode();
 }
+void KRLTool::PTP_REL(const std::vector<double>& ptp,
+    const std::vector<double>& mask,
+    bool use_radians,
+    double vel_ptp)
+{
+    PointToPoint(ptp,mask,use_radians,true,vel_ptp);
+}
+void KRLTool::PTP(const std::vector<double>& ptp,
+    const std::vector<double>& mask,
+    bool use_radians,
+    double vel_ptp)
+{
+    PointToPoint(ptp,mask,use_radians,false,vel_ptp);
+}
 
-void KRLTool::PTP(const std::vector<double>& ptp,const std::vector<double>& mask,bool use_radians,double vel_ptp)
+void KRLTool::PointToPoint(const std::vector<double>& ptp,
+    const std::vector<double>& mask,
+    bool use_radians,
+    bool use_ptp_rel,
+    double vel_ptp)
 {
     if(ptp.size() != LBR_MNJ)
     {
@@ -280,20 +369,21 @@ void KRLTool::PTP(const std::vector<double>& ptp,const std::vector<double>& mask
     if(use_radians)
         conv = 180.0/3.14159265359;
 
+    toKRL.intData[PTP_CMD_TYPE] = use_ptp_rel;
     toKRL.realData[A1] = conv * ptp[0];
-    toKRL.realData[A2] = 90 + conv * ptp[1];
+    toKRL.realData[A2] = (use_ptp_rel ? 0.0:90.0) + conv * ptp[1];
     toKRL.realData[E1] = conv * ptp[2];
     toKRL.realData[A3] = conv * ptp[3];
     toKRL.realData[A4] = conv * ptp[4];
     toKRL.realData[A5] = conv * ptp[5];
     toKRL.realData[A6] = conv * ptp[6];
-    setBit(toKRL.boolData,A1_MASK,mask[0]);
-    setBit(toKRL.boolData,A2_MASK,mask[1]);
-    setBit(toKRL.boolData,E1_MASK,mask[2]);
-    setBit(toKRL.boolData,A3_MASK,mask[3]);
-    setBit(toKRL.boolData,A4_MASK,mask[4]);
-    setBit(toKRL.boolData,A5_MASK,mask[5]);
-    setBit(toKRL.boolData,A6_MASK,mask[6]);
+    setBit(toKRL.boolData,MASK_0,mask[0]);
+    setBit(toKRL.boolData,MASK_1,mask[1]);
+    setBit(toKRL.boolData,MASK_2,mask[2]);
+    setBit(toKRL.boolData,MASK_3,mask[3]);
+    setBit(toKRL.boolData,MASK_4,mask[4]);
+    setBit(toKRL.boolData,MASK_5,mask[5]);
+    setBit(toKRL.boolData,MASK_6,mask[6]);
 
     setBit(toKRL.boolData,PTP_CMD,true);
     doUpdate();

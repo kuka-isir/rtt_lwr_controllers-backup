@@ -6,21 +6,21 @@ namespace krl{
 enum FRI_BOOL_DATA_DESCRIPTION
 {
     KRL_LOOP_REQUESTED = 0,
-    KRL_ACK,
+    EMPTY_BOOL,
     SET_CONTROL_MODE,
     SET_TOOL,
     SET_BASE,
-    PTP_CMD,
-    LIN_CMD,
-    STOP2,
-    SET_VEL,
-    A1_MASK,
-    A2_MASK,
-    E1_MASK,
-    A3_MASK,
-    A4_MASK,
-    A5_MASK,
-    A6_MASK
+    PTP_CMD, // send a PTP command
+    LIN_CMD, // send a lin command (see LIN_CMD_TYPE)
+    STOP2, // Send a stop2 (brakes but still active)
+    SET_VEL, // Set the max vel (should modify the value on teach upper right)
+    MASK_0, // Mask used for A1-A6 (PTP) or XYZABC (LIN)
+    MASK_1,
+    MASK_2,
+    MASK_3,
+    MASK_4,
+    MASK_5,
+    MASK_6
 };
 
 enum FRI_INT_DATA_DESCRIPTION
@@ -29,7 +29,9 @@ enum FRI_INT_DATA_DESCRIPTION
     CONTROL_MODE,
     TOOL,
     BASE,
-    FRI_CMD
+    FRI_CMD,
+    PTP_CMD_TYPE, // 0 is PTP, 1 is PTP_REL
+    LIN_CMD_TYPE // 0 is LIN, 1 is LIN_REL
 };
 
 enum FRI_COMMAND
@@ -41,12 +43,12 @@ enum FRI_COMMAND
 
 enum FRI_REAL_DATA_DESCRIPTION
 {
-    REAL_EMPTY0 = 0,
-    REAL_EMPTY1,
-    REAL_EMPTY2,
-    REAL_EMPTY3,
-    REAL_EMPTY4,
-    REAL_EMPTY5,
+    X = 0,
+    Y,
+    Z,
+    A,
+    B,
+    C,
     REAL_EMPTY6,
     REAL_EMPTY7,
     VEL_PERCENT,
