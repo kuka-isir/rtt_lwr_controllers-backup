@@ -437,6 +437,7 @@ void KRLTool::printAll()
 bool KRLTool::startHook() {
   // Start action server
   ptp_action_server_.start();
+  lin_action_server_.start();
   return true;
 }
 
