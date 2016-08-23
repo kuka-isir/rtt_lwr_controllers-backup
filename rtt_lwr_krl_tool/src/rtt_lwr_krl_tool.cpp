@@ -101,7 +101,7 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
     {
         log(Warning) << "Sending new PTP Command "<<endlog();
     }
-    this->PointToPoint(ptp_cmd,ptp_mask,false,gh.getGoal()->use_relative,gh.getGoal()->vel_percent);
+    this->PointToPoint(ptp_cmd,ptp_mask,true,gh.getGoal()->use_relative,gh.getGoal()->vel_percent);
 }
 
 void KRLTool::PTPcancelCallback(PTPGoalHandle gh)
@@ -474,8 +474,22 @@ void KRLTool::updateHook()
             has_sent_cmd = false;
             // setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
             // setBit(toKRL.boolData,KRL_ACK,false);
-            toKRL.boolData = 0;
+            for(int i=0;i<FRI_USER_SIZE;++i)
+            {
+                // Reset bits if they have been acked .Special case STOP2
+                if(getBit(fromKRL.boolData,i) && i != STOP2)
+                    setBit(toKRL.boolData,i,false);
+            }
+//             toKRL.boolData = 0;
             log(Info) << "----- ACKED   -----" << endlog();
+            
+            actionlib_msgs::GoalStatus goal_status;
+            goal_status.status = actionlib_msgs::GoalStatus::SUCCEEDED;
+            krl_msgs::LINResult lin_res;
+            krl_msgs::PTPResult ptp_res;
+            
+            lin_action_server_.publishResult(goal_status,lin_res);
+            ptp_action_server_.publishResult(goal_status,ptp_res);
 
         }
         else if(getBit(fromKRL.boolData,1) && !has_sent_cmd)
@@ -498,7 +512,12 @@ void KRLTool::updateHook()
     }else{
         setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
         setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
-        toKRL.boolData = 0;
+//         toKRL.boolData = 0;
+        for(int i=0;i<FRI_USER_SIZE;++i)
+        {
+            if(getBit(fromKRL.boolData,i) && i != STOP2)
+                setBit(toKRL.boolData,i,false);
+        }
     }
 
     port_toKRL.write(toKRL);
