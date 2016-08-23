@@ -1,9 +1,0 @@
-# Define the goal
-float32[] ptp_goal_rad
-bool[] ptp_mask
-float32 vel_percent
----
-# Define the result
----
-# Define a feedback message
-bool is_running

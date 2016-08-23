@@ -1,9 +1,0 @@
-# Goal
-geometry_msgs/Vector3 XYZ
-geometry_msgs/Vector3 XYZ_mask
-geometry_msgs/Vector3 ABC
-geometry_msgs/Vector3 ABC_mask
----
-# Result
----
-# Feedback
