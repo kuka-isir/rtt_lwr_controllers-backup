@@ -106,9 +106,9 @@ protected:
 private: void PointToPoint(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians,bool use_ptp_rel, double vel_ptp);
 protected:
     void PTP_REL(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians, double vel_ptp);
-    void LIN_REL(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& ABC_rad);
-    void LIN(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& ABC_rad);
-private: void Linear(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& ABC_rad,bool use_lin_rel);
+    void LIN_REL(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
+    void LIN(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
+private: void Linear(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad,bool use_lin_rel);
 protected:
     void setTool(int tool_number);
     void setBase(int base_number);

@@ -124,7 +124,7 @@ void KRLTool::LINgoalCallback(LINGoalHandle gh)
     {
         log(Warning) << "Sending new LIN Command "<<endlog();
     }
-    Linear(gh.getGoal()->XYZ,gh.getGoal()->ABC,gh.getGoal()->use_relative);
+    Linear(gh.getGoal()->XYZ,gh.getGoal()->RPY,gh.getGoal()->use_relative);
     gh.setAccepted();
     lin_current_gh = gh;
 }
@@ -138,19 +138,19 @@ void KRLTool::LINcancelCallback(LINGoalHandle gh)
 }
 
 void KRLTool::LIN(const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& ABC_rad)
+    const geometry_msgs::Vector3& RPY_rad)
 {
-    Linear(XYZ_meters,ABC_rad,false);
+    Linear(XYZ_meters,RPY_rad,false);
 }
 
 void KRLTool::LIN_REL(const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& ABC_rad)
+    const geometry_msgs::Vector3& RPY_rad)
 {
-    Linear(XYZ_meters,ABC_rad,true);
+    Linear(XYZ_meters,RPY_rad,true);
 }
 
 void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& ABC_rad,
+    const geometry_msgs::Vector3& RPY_rad,
     bool use_lin_rel)
 {
     bool use_radians = true;
@@ -165,9 +165,10 @@ void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
     toKRL.realData[X] = XYZ_meters.x * 1000.0;
     toKRL.realData[Y] = XYZ_meters.y * 1000.0;
     toKRL.realData[Z] = XYZ_meters.z * 1000.0;
-    toKRL.realData[A] = ABC_rad.x * conv;
-    toKRL.realData[B] = ABC_rad.y * conv;
-    toKRL.realData[C] = ABC_rad.z * conv;
+    // WARNING: A is rotation around Z , B around Y, C around X
+    toKRL.realData[A] = RPY_rad.z * conv;
+    toKRL.realData[B] = RPY_rad.y * conv;
+    toKRL.realData[C] = RPY_rad.x * conv;
     doUpdate();
 }
 
@@ -496,8 +497,9 @@ void KRLTool::updateHook()
         else if(getBit(fromKRL.boolData,KRL_LOOP_REQUESTED) && !has_sent_cmd)
         {
             // special case, bug or error, lets write 00
-            setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
-            log(Error) << "getBit(fromKRL.boolData,KRL_LOOP_REQUESTED) && !has_sent_cmd THIS SHOULD NOT HAPPEND"<< endlog();
+            // setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
+            // printAll();
+            // log(Error) << "getBit(fromKRL.boolData,KRL_LOOP_REQUESTED) && !has_sent_cmd THIS SHOULD NOT HAPPEND"<< endlog();
         }
         else
         {

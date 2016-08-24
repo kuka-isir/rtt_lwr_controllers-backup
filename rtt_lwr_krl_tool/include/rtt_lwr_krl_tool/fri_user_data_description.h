@@ -43,22 +43,22 @@ enum FRI_COMMAND
 
 enum FRI_REAL_DATA_DESCRIPTION
 {
-    X = 0,
-    Y,
-    Z,
-    A,
-    B,
-    C,
+    X = 0, // x in meters
+    Y, // y in meters
+    Z, // z in meters
+    A, // rotation around Z in degrees
+    B, // rotation around Y in degrees
+    C, // rotation around X in degrees
     REAL_EMPTY6,
     REAL_EMPTY7,
-    VEL_PERCENT,
-    A1,
-    A2,
-    E1,
-    A3,
-    A4,
-    A5,
-    A6
+    VEL_PERCENT, // Max velocity in % (upper right on teach)
+    A1, // Joint 0 in degrees
+    A2, // Joint 1 in degrees
+    E1, // Joint 2 in degrees
+    A3, // Joint 3 in degrees
+    A4, // Joint 4 in degrees
+    A5, // Joint 5 in degrees
+    A6  // Joint 6 in degrees
 };
 
 }
