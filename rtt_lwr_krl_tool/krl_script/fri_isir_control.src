@@ -1,4 +1,4 @@
-&ACCESS RVO
+&ACCESS RV
 &REL 47
 &COMMENT ISIR-CNRS 2016
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
@@ -101,9 +101,9 @@ repeat
   ;FOLD New Control Mode requested
   if ( $fri_frm_bool[3] ) then
 
-    $MSG_T.KEY[] = "New Control Mode Requested"
+    $MSG_T.KEY[] = "New Control Mode Requested          "
     $MSG_T.VALID = TRUE
-    WAIT FOR ($MSG_T.VALID == FALSE)
+
 
     ; TODO : add a mode 40 Joint torque
     if ( ($fri_frm_int[2] == 10) OR ($fri_frm_int[2] == 20) OR ($fri_frm_int[2] == 30) ) then
@@ -134,7 +134,7 @@ repeat
         ENDIF
       ENDIF
       $MSG_T.VALID = TRUE
-      WAIT FOR ($MSG_T.VALID == FALSE)
+
       ;ENDFOLD (Screen output)
 
       PTP CLAMP_AXES($AXIS_ACT)
@@ -148,9 +148,9 @@ repeat
   ;FOLD New tool requested
   if( $fri_frm_bool[4] ) then
 
-    $MSG_T.KEY[] = "New Tool Requested"
+    $MSG_T.KEY[] = "New Tool Requested                  "
     $MSG_T.VALID = TRUE
-    WAIT FOR ($MSG_T.VALID == FALSE)
+
 
     if( $fri_frm_int[3] >= 0 ) then
       BAS(#TOOL,$fri_frm_int[3])
@@ -165,9 +165,9 @@ repeat
   ;FOLD New base requested
   if( $fri_frm_bool[5] ) then
 
-    $MSG_T.KEY[] = "New Base Requested"
+    $MSG_T.KEY[] = "New Base Requested                  "
     $MSG_T.VALID = TRUE
-    WAIT FOR ($MSG_T.VALID == FALSE)
+
 
     if( $fri_frm_int[4] >= 0 ) then
       BAS(#BASE,$fri_frm_int[4])
@@ -185,13 +185,11 @@ repeat
     use_rel = ($fri_frm_int[6] <> 0)
 
     if( use_rel ) then
-      $MSG_T.KEY[] = "New PTP_REL Command"
+      $MSG_T.KEY[] = "New PTP_REL Command               "
       $MSG_T.VALID = TRUE
-      WAIT FOR ($MSG_T.VALID == FALSE)
     else
-      $MSG_T.KEY[] = "New PTP Command"
+      $MSG_T.KEY[] = "New PTP Command                   "
       $MSG_T.VALID = TRUE
-      WAIT FOR ($MSG_T.VALID == FALSE)
     endif
 
     if(use_rel) then
@@ -243,13 +241,11 @@ repeat
     use_rel = ($fri_frm_int[7] <> 0)
 
     if( use_rel ) then
-      $MSG_T.KEY[] = "New LIN_REL Command"
+      $MSG_T.KEY[] = "New LIN_REL Command               "
       $MSG_T.VALID = TRUE
-      WAIT FOR ($MSG_T.VALID == FALSE)
     else
-      $MSG_T.KEY[] = "New LIN Command"
+      $MSG_T.KEY[] = "New LIN Command                   "
       $MSG_T.VALID = TRUE
-      WAIT FOR ($MSG_T.VALID == FALSE)
     endif
 
     if(use_rel) then

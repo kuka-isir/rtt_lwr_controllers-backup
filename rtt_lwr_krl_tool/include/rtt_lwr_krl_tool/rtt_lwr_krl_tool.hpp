@@ -116,6 +116,7 @@ protected:
     void unsetSTOP2();
     void setVELPercent(float vel_percent);
     bool sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
+    bool unsetSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
 
     void setJointImpedanceControlMode();
     void setCartesianImpedanceControlMode();

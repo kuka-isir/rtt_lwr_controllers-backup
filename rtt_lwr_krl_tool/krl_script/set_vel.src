@@ -1,14 +1,14 @@
-&ACCESS RV1
-&REL 8
+&ACCESS RV
+&REL 9
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\FunctionVorgabe
 &PARAM EDITMASK = *
 def set_vel( )
-   
+ 
 if( ($fri_frm_rea[9] >= 0) or ($fri_frm_rea[9] <= 100)) then
 
   ;BAS (#VEL_PTP, $fri_frm_rea[9])
   $OV_PRO = $fri_frm_rea[9]
-  $MSG_T.KEY[] = "Setting new velocity"
+  $MSG_T.KEY[] = "Setting new velocity                  "
   $MSG_T.VALID = true
   $fri_to_bool[9] = true
   wait for ($fri_frm_bool[9] == false)

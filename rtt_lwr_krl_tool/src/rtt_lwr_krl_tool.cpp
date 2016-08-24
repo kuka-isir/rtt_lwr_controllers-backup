@@ -51,6 +51,7 @@ is_joint_torque_control_mode(false)
     this->addOperation("unsetSTOP2",&KRLTool::unsetSTOP2,this);
     this->addOperation("setVELPercent",&KRLTool::setVELPercent,this);
     this->addOperation("sendSTOP2_srv",&KRLTool::sendSTOP2_srv,this);
+    this->addOperation("unsetSTOP2_srv",&KRLTool::unsetSTOP2_srv,this);
     this->addAttribute("doUpdate",do_update);
 
     for(unsigned int i=0;i<FRI_USER_SIZE;i++)
@@ -190,6 +191,12 @@ bool KRLTool::sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse
     return true;
 }
 
+bool KRLTool::unsetSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp)
+{
+    unsetSTOP2();
+    return true;
+}
+
 void KRLTool::resetJointImpedanceGains()
 {
     for(unsigned int i=0;i<cmd.stiffness.size();++i){
@@ -276,6 +283,7 @@ bool KRLTool::configureHook()
     if(rosservice)
     {
         rosservice->connect("sendSTOP2_srv",this->getName()+"/send_stop2","std_srvs/Empty");
+        rosservice->connect("unsetSTOP2_srv",this->getName()+"/unset_stop2","std_srvs/Empty");
     }
     else
     {
