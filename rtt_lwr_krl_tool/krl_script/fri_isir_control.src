@@ -1,8 +1,8 @@
-&ACCESS RVP
-&REL 45
+&ACCESS RVO
+&REL 47
 &COMMENT ISIR-CNRS 2016
-&PARAM tool_number = 10
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
+&PARAM tool_number = 10
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM fri_rate_ms = 1.0
 &PARAM base_number = 0
@@ -12,7 +12,7 @@ DEF fri_isir_control( )
 ; Copyright ISIR-CNRS 2016
 ; Author: Antoine Hoarau
 ;ENDFOLD (ProgramInfo)
-
+ 
 ;FOLD Variables declaration
 INT i
 BOOL use_rel
@@ -82,24 +82,20 @@ until $FriState == #MON
 PTP start_pose
 
 repeat
+
   ;FOLD Wait for KRL_LOOP_REQUESTED
-  while $fri_frm_bool[1] == false
-    $fri_to_int[2] = $STIFFNESS.STRATEGY
-
-    if($FriState==#CMD) then
-      $fri_to_int[1] = 2
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) ) then
+      $fri_to_bool[i]=false
     endif
-    if($FriState==#MON) then
-      $fri_to_int[1] = 1
-    endif
-
-    $fri_to_bool[1] = false
-    $fri_to_bool[2] = false
-    $fri_to_bool[9] = false
-
-    wait sec 0.5
-
-  endwhile
+  endfor
+  if($FriState==#CMD) then
+    $fri_to_int[1] = 2
+  endif
+  if($FriState==#MON) then
+    $fri_to_int[1] = 1
+  endif
+  wait for $fri_frm_bool[1]
   ;ENDFOLD
 
   ;FOLD New Control Mode requested
@@ -107,6 +103,7 @@ repeat
 
     $MSG_T.KEY[] = "New Control Mode Requested"
     $MSG_T.VALID = TRUE
+    WAIT FOR ($MSG_T.VALID == FALSE)
 
     ; TODO : add a mode 40 Joint torque
     if ( ($fri_frm_int[2] == 10) OR ($fri_frm_int[2] == 20) OR ($fri_frm_int[2] == 30) ) then
@@ -137,13 +134,12 @@ repeat
         ENDIF
       ENDIF
       $MSG_T.VALID = TRUE
+      WAIT FOR ($MSG_T.VALID == FALSE)
       ;ENDFOLD (Screen output)
 
       PTP CLAMP_AXES($AXIS_ACT)
       ret=fristart(1.0)
       wait sec 0.2
-
-      $fri_to_bool[3] = true
 
     endif
   endif
@@ -154,6 +150,7 @@ repeat
 
     $MSG_T.KEY[] = "New Tool Requested"
     $MSG_T.VALID = TRUE
+    WAIT FOR ($MSG_T.VALID == FALSE)
 
     if( $fri_frm_int[3] >= 0 ) then
       BAS(#TOOL,$fri_frm_int[3])
@@ -161,8 +158,6 @@ repeat
       $STIFFNESS.BASE = $BASE
       $STIFFNESS.COMMIT=TRUE
     endif
-
-    $fri_to_bool[4] = true
 
   endif
   ;ENDFOLD
@@ -172,6 +167,7 @@ repeat
 
     $MSG_T.KEY[] = "New Base Requested"
     $MSG_T.VALID = TRUE
+    WAIT FOR ($MSG_T.VALID == FALSE)
 
     if( $fri_frm_int[4] >= 0 ) then
       BAS(#BASE,$fri_frm_int[4])
@@ -179,8 +175,6 @@ repeat
       $STIFFNESS.BASE = $BASE
       $STIFFNESS.COMMIT=TRUE
     endif
-
-    $fri_to_bool[5] = true
 
   endif
   ;ENDFOLD
@@ -193,9 +187,11 @@ repeat
     if( use_rel ) then
       $MSG_T.KEY[] = "New PTP_REL Command"
       $MSG_T.VALID = TRUE
+      WAIT FOR ($MSG_T.VALID == FALSE)
     else
       $MSG_T.KEY[] = "New PTP Command"
       $MSG_T.VALID = TRUE
+      WAIT FOR ($MSG_T.VALID == FALSE)
     endif
 
     if(use_rel) then
@@ -206,37 +202,30 @@ repeat
 
     if( $fri_frm_bool[10] ) then
       PTP_CMD.A1 = $fri_frm_rea[10]
-      $fri_to_bool[10] = true
     endif
 
     if( $fri_frm_bool[11] ) then
       PTP_CMD.A2 = $fri_frm_rea[11]
-      $fri_to_bool[11] = true
     endif
 
     if( $fri_frm_bool[12] ) then
       PTP_CMD.E1 = $fri_frm_rea[12]
-      $fri_to_bool[12] = true
     endif
 
     if( $fri_frm_bool[13] ) then
       PTP_CMD.A3 = $fri_frm_rea[13]
-      $fri_to_bool[13] = true
     endif
 
     if( $fri_frm_bool[14] ) then
       PTP_CMD.A4 = $fri_frm_rea[14]
-      $fri_to_bool[14] = true
     endif
 
     if( $fri_frm_bool[15] ) then
       PTP_CMD.A5 = $fri_frm_rea[15]
-      $fri_to_bool[15] = true
     endif
 
     if( $fri_frm_bool[16] ) then
       PTP_CMD.A6 = $fri_frm_rea[16]
-      $fri_to_bool[16] = true
     endif
 
     if(use_rel) then
@@ -244,8 +233,6 @@ repeat
     else
       PTP CLAMP_AXES(PTP_CMD)
     endif
-
-    $fri_to_bool[6] = true
 
   endif
   ;ENDFOLD
@@ -258,9 +245,11 @@ repeat
     if( use_rel ) then
       $MSG_T.KEY[] = "New LIN_REL Command"
       $MSG_T.VALID = TRUE
+      WAIT FOR ($MSG_T.VALID == FALSE)
     else
       $MSG_T.KEY[] = "New LIN Command"
       $MSG_T.VALID = TRUE
+      WAIT FOR ($MSG_T.VALID == FALSE)
     endif
 
     if(use_rel) then
@@ -269,32 +258,26 @@ repeat
 
     if( $fri_frm_bool[10] OR use_rel) then
       LIN_CMD.X = $fri_frm_rea[1]
-      $fri_to_bool[10] = true
     endif
 
     if( $fri_frm_bool[11] OR use_rel ) then
       LIN_CMD.Y = $fri_frm_rea[2]
-      $fri_to_bool[11] = true
     endif
 
     if( $fri_frm_bool[12] OR use_rel ) then
       LIN_CMD.Z = $fri_frm_rea[3]
-      $fri_to_bool[12] = true
     endif
 
     if( $fri_frm_bool[13] OR use_rel ) then
       LIN_CMD.A = $fri_frm_rea[4]
-      $fri_to_bool[13] = true
     endif
 
     if( $fri_frm_bool[14] OR use_rel ) then
       LIN_CMD.B = $fri_frm_rea[5]
-      $fri_to_bool[14] = true
     endif
 
     if( $fri_frm_bool[15] OR use_rel ) then
       LIN_CMD.C = $fri_frm_rea[6]
-      $fri_to_bool[15] = true
     endif
 
     if( use_rel ) then
@@ -303,13 +286,19 @@ repeat
       LIN LIN_CMD
     endif
 
-    $fri_to_bool[7] = true
-
   endif
   ;ENDFOLD
 
+  ; This wait is necessary otherwise it will execute
+  ; the next set of instructions (!!)
+  WAIT SEC 0.1
 
-  $fri_to_bool[1] = true
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) ) then
+      $fri_to_bool[i]=$fri_frm_bool[i]
+    endif
+  endfor
+
   wait for ($fri_frm_bool[1] == false)
 
 until ($fri_frm_int[1] == 3)

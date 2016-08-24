@@ -1,9 +1,9 @@
-&ACCESS RVO
-&REL 12
+&ACCESS RVO1
+&REL 14
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\FunctionVorgabe
 &PARAM EDITMASK = *
 def do_stop2()
- 
+   
 $fri_to_bool[8] = true
 $msg_t.key[] = "stop2 requested"
 $msg_t.valid = true

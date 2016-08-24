@@ -63,6 +63,11 @@ private:
     rtt_actionlib::RTTActionServer<krl_msgs::LINAction> lin_action_server_;
     rtt_actionlib::RTTActionServer<krl_msgs::LINAction> lin_rel_action_server_;
 
+    PTPGoalHandle ptp_current_gh;
+    krl_msgs::PTPResult ptp_result;
+    LINGoalHandle lin_current_gh;
+    krl_msgs::LINResult lin_result;
+
 public:
     KRLTool(const std::string& name);
     virtual ~KRLTool(){};
