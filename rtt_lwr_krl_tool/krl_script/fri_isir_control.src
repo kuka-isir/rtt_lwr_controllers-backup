@@ -1,8 +1,8 @@
-&ACCESS RV
-&REL 47
+&ACCESS RVEO
+&REL 49
 &COMMENT ISIR-CNRS 2016
-&PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM tool_number = 10
+&PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM fri_rate_ms = 1.0
 &PARAM base_number = 0
@@ -13,21 +13,6 @@ DEF fri_isir_control( )
 ; Author: Antoine Hoarau
 ;ENDFOLD (ProgramInfo)
  
-;FOLD Variables declaration
-INT i
-BOOL use_rel
-DECL FRISTATE ret
-REAL fri_rate_ms
-INT  tool_number
-;EXT  BAS (BAS_COMMAND  :IN,REAL  :IN )
-;DECL INT SUCCESS
-EXT  resetSTIFFNESS ( )
-EXT do_stop2()
-EXT set_vel()
-DECL E6AXIS start_pose
-DECL E6AXIS PTP_CMD
-DECL E6POS LIN_CMD
-;ENDFOLD DECL Variables
 ;FOLD INI
 ;FOLD BASISTECH INI
 GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
@@ -62,7 +47,7 @@ $fri_to_int[1] = 0
 $fri_to_int[2] = 10
 $fri_to_int[3] = tool_number
 
-resetSTIFFNESS()
+resetRobotParams()
 
 BAS(#TOOL,tool_number)
 $STIFFNESS.TOOL = $TOOL
@@ -96,6 +81,10 @@ repeat
     $fri_to_int[1] = 1
   endif
   wait for $fri_frm_bool[1]
+
+  use_rel = ($fri_frm_int[6] <> 0)
+  input_type = $fri_frm_int[7]
+
   ;ENDFOLD
 
   ;FOLD New Control Mode requested
@@ -103,7 +92,6 @@ repeat
 
     $MSG_T.KEY[] = "New Control Mode Requested          "
     $MSG_T.VALID = TRUE
-
 
     ; TODO : add a mode 40 Joint torque
     if ( ($fri_frm_int[2] == 10) OR ($fri_frm_int[2] == 20) OR ($fri_frm_int[2] == 30) ) then
@@ -151,7 +139,6 @@ repeat
     $MSG_T.KEY[] = "New Tool Requested                  "
     $MSG_T.VALID = TRUE
 
-
     if( $fri_frm_int[3] >= 0 ) then
       BAS(#TOOL,$fri_frm_int[3])
       $STIFFNESS.TOOL = $TOOL
@@ -168,7 +155,6 @@ repeat
     $MSG_T.KEY[] = "New Base Requested                  "
     $MSG_T.VALID = TRUE
 
-
     if( $fri_frm_int[4] >= 0 ) then
       BAS(#BASE,$fri_frm_int[4])
       $STIFFNESS.TOOL = $TOOL
@@ -182,55 +168,31 @@ repeat
   ;FOLD Execute PTP Command
   if( $fri_frm_bool[6] ) then
 
-    use_rel = ($fri_frm_int[6] <> 0)
-
     if( use_rel ) then
       $MSG_T.KEY[] = "New PTP_REL Command               "
-      $MSG_T.VALID = TRUE
     else
       $MSG_T.KEY[] = "New PTP Command                   "
-      $MSG_T.VALID = TRUE
     endif
 
-    if(use_rel) then
-      PTP_CMD = {A1 0.0, A2 0.0, E1 0.0, A3 0.0, A4 0.0, A5 0.0, A6 0.0}
-    else
-      PTP_CMD = CLAMP_AXES($AXIS_ACT)
-    endif
+    $MSG_T.VALID = TRUE
 
-    if( $fri_frm_bool[10] ) then
-      PTP_CMD.A1 = $fri_frm_rea[10]
-    endif
+    switch input_type
+    case 0
+      BuildJntCmdFromFRI()
+      if(use_rel) then
+        PTP_REL JOINT_CMD
+      else
+        PTP CLAMP_AXES(JOINT_CMD)
+      endif
 
-    if( $fri_frm_bool[11] ) then
-      PTP_CMD.A2 = $fri_frm_rea[11]
-    endif
-
-    if( $fri_frm_bool[12] ) then
-      PTP_CMD.E1 = $fri_frm_rea[12]
-    endif
-
-    if( $fri_frm_bool[13] ) then
-      PTP_CMD.A3 = $fri_frm_rea[13]
-    endif
-
-    if( $fri_frm_bool[14] ) then
-      PTP_CMD.A4 = $fri_frm_rea[14]
-    endif
-
-    if( $fri_frm_bool[15] ) then
-      PTP_CMD.A5 = $fri_frm_rea[15]
-    endif
-
-    if( $fri_frm_bool[16] ) then
-      PTP_CMD.A6 = $fri_frm_rea[16]
-    endif
-
-    if(use_rel) then
-      PTP_REL PTP_CMD
-    else
-      PTP CLAMP_AXES(PTP_CMD)
-    endif
+    case 1
+      BuildCartCmdFromFRI()
+      if(use_rel) then
+        PTP_REL CART_CMD
+      else
+        PTP CART_CMD
+      endif
+    endswitch
 
   endif
   ;ENDFOLD
@@ -238,48 +200,20 @@ repeat
   ;FOLD Execute LIN Command
   if( $fri_frm_bool[7] ) then
 
-    use_rel = ($fri_frm_int[7] <> 0)
-
     if( use_rel ) then
       $MSG_T.KEY[] = "New LIN_REL Command               "
-      $MSG_T.VALID = TRUE
     else
       $MSG_T.KEY[] = "New LIN Command                   "
-      $MSG_T.VALID = TRUE
     endif
+
+    $MSG_T.VALID = TRUE
+
+    BuildCartCmdFromFRI()
 
     if(use_rel) then
-      LIN_CMD = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
-    endif
-
-    if( $fri_frm_bool[10] OR use_rel) then
-      LIN_CMD.X = $fri_frm_rea[1]
-    endif
-
-    if( $fri_frm_bool[11] OR use_rel ) then
-      LIN_CMD.Y = $fri_frm_rea[2]
-    endif
-
-    if( $fri_frm_bool[12] OR use_rel ) then
-      LIN_CMD.Z = $fri_frm_rea[3]
-    endif
-
-    if( $fri_frm_bool[13] OR use_rel ) then
-      LIN_CMD.A = $fri_frm_rea[4]
-    endif
-
-    if( $fri_frm_bool[14] OR use_rel ) then
-      LIN_CMD.B = $fri_frm_rea[5]
-    endif
-
-    if( $fri_frm_bool[15] OR use_rel ) then
-      LIN_CMD.C = $fri_frm_rea[6]
-    endif
-
-    if( use_rel ) then
-      LIN_REL LIN_CMD
+      LIN_REL CART_CMD
     else
-      LIN LIN_CMD
+      LIN CART_CMD
     endif
 
   endif
@@ -326,6 +260,138 @@ DEFFCT BOOL isZeroStiffness(s:IN)
   endif
   return false
 ENDFCT
+
+DEF BuildJntCmdFromFRI()
+
+  if(use_rel) then
+    JOINT_CMD = {A1 0.0, A2 0.0, E1 0.0, A3 0.0, A4 0.0, A5 0.0, A6 0.0}
+  else
+    JOINT_CMD = CLAMP_AXES($AXIS_ACT)
+  endif
+
+  if( $fri_frm_bool[10] ) then
+    JOINT_CMD.A1 = $fri_frm_rea[10]
+  endif
+
+  if( $fri_frm_bool[11] ) then
+    JOINT_CMD.A2 = $fri_frm_rea[11]
+  endif
+
+  if( $fri_frm_bool[12] ) then
+    JOINT_CMD.E1 = $fri_frm_rea[12]
+  endif
+
+  if( $fri_frm_bool[13] ) then
+    JOINT_CMD.A3 = $fri_frm_rea[13]
+  endif
+
+  if( $fri_frm_bool[14] ) then
+    JOINT_CMD.A4 = $fri_frm_rea[14]
+  endif
+
+  if( $fri_frm_bool[15] ) then
+    JOINT_CMD.A5 = $fri_frm_rea[15]
+  endif
+
+  if( $fri_frm_bool[16] ) then
+    JOINT_CMD.A6 = $fri_frm_rea[16]
+  endif
+END
+
+DEF BuildCartCmdFromFRI()
+
+  if(use_rel) then
+    CART_CMD = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
+  endif
+
+  if( $fri_frm_bool[10] OR use_rel) then
+    CART_CMD.X = $fri_frm_rea[1]
+  endif
+
+  if( $fri_frm_bool[11] OR use_rel ) then
+    CART_CMD.Y = $fri_frm_rea[2]
+  endif
+
+  if( $fri_frm_bool[12] OR use_rel ) then
+    CART_CMD.Z = $fri_frm_rea[3]
+  endif
+
+  if( $fri_frm_bool[13] OR use_rel ) then
+    CART_CMD.A = $fri_frm_rea[4]
+  endif
+
+  if( $fri_frm_bool[14] OR use_rel ) then
+    CART_CMD.B = $fri_frm_rea[5]
+  endif
+
+  if( $fri_frm_bool[15] OR use_rel ) then
+    CART_CMD.C = $fri_frm_rea[6]
+  endif
+
+END
+
+def do_stop2()
+
+$fri_to_bool[8] = true
+$msg_t.key[] = "stop2 requested                         "
+$msg_t.valid = true
+brake
+$msg_t.key[] = "waiting for fri_bool[8] to resume       "
+$msg_t.valid = true
+wait for $fri_frm_bool[8] == false
+
+end
+
+def set_vel( )
+
+if( ($fri_frm_rea[9] >= 0) or ($fri_frm_rea[9] <= 100)) then
+
+  ;BAS (#VEL_PTP, $fri_frm_rea[9])
+  $OV_PRO = $fri_frm_rea[9]
+  $MSG_T.KEY[] = "Setting new velocity                  "
+  $MSG_T.VALID = true
+  $fri_to_bool[9] = true
+  wait for ($fri_frm_bool[9] == false)
+  $fri_to_bool[9] = false
+endif
+
+end
+
+DEF resetRobotParams( )
+
+ ;Control Strategy
+ $STIFFNESS.STRATEGY = 10
+
+ ;Frame for Cartesian Stiffness mode #TOOL or #BASE
+ $STIFFNESS.FRAMETYPE = #BASE
+
+ ;Cartesian Spring Stiffness [0.01, 5000] N/m
+ $STIFFNESS.CPSTIFFNESS = {X 2000, Y 2000, Z 2000, A 200, B 200, C 200}
+
+ ;Cartesian Spring Damping [0.1, 1.0] N*s/m
+ $STIFFNESS.CPDAMPING = {X 0.7, Y 0.7, Z 0.7, A 0.7, B 0.7, C 0.7}
+
+ ;Axis specific spring stiffness [0.01, 2000] Nm/rad
+ $STIFFNESS.AXISSTIFFNESS = {A1 1000.0, A2 1000.0, A3 1000.0, A4 1000.0, A5 1000.0, A6 1000.0, E1 1000.0}
+
+ ;$STIFFNESS.AXISSTIFFNESS = {A1 100, A2 100, A3 100, A4 100, A5 100, A6 100, E1 100}
+ ;Axis specific spring damping [0.1, 1.0] Nm*s/rad
+ $STIFFNESS.AXISDAMPING = {A1 0.7, A2 0.7, A3 0.7, A4 0.7, A5 0.7, A6 0.7, E1 0.7}
+
+ ;Limitation of the cartesian deviation from path [0.1, 100] mm
+ $STIFFNESS.CPMAXDELTA = {X 100, Y 100, Z 100, A 10, B 10, C 10}
+
+ ;Limitation of the Cartesian force at the Tool Center Point Recommanded max: 150N
+ $STIFFNESS.MAXFORCE = {X 150.0, Y 150.0, Z 150.0, A 20.0, B 20.0, C 20.0}
+
+ ;Limitation of the axis specific deviation in degree
+ $STIFFNESS.AXISMAXDELTA = {A1 90.0, A2 90.0, A3 90.0, A4 90.0, A5 90.0, A6 90.0, E1 90.0}
+
+ ;Limitation of the axis specific max torque
+ $STIFFNESS.AXISMAXDELTATRQ = {A1 20.0, A2 20.0, A3 20.0, A4 20.0, A5 20.0, A6 20.0, E1 20.0}
+
+ $STIFFNESS.COMMIT=TRUE
+END
 
 DEFFCT E6AXIS TOUCH_AXIS(ax:IN)
  E6AXIS ax

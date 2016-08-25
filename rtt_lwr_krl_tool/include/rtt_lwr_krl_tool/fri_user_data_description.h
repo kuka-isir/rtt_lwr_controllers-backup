@@ -30,8 +30,14 @@ enum FRI_INT_DATA_DESCRIPTION
     TOOL,
     BASE,
     FRI_CMD,
-    PTP_CMD_TYPE, // 0 is PTP, 1 is PTP_REL
-    LIN_CMD_TYPE // 0 is LIN, 1 is LIN_REL
+    USE_RELATIVE, // 0 is false, 1 is true
+    CMD_INPUT_TYPE // 0 is Joint, 1 is Cartesian
+};
+
+enum COMMAND_INPUT_TYPE
+{
+    JOINT = 0,
+    CARTESIAN
 };
 
 enum FRI_COMMAND

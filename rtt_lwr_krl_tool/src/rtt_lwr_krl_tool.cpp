@@ -13,34 +13,35 @@ do_update(false),
 do_send_imp_cmd(false),
 is_joint_torque_control_mode(false)
 {
-    this->ports()->addPort("intDataToKRL_ros",port_intDataToKRL_ros).doc("");
-    this->ports()->addPort("intDataFromKRL_ros",port_intDataFromKRL_ros).doc("");
-    this->ports()->addPort("realDataToKRL_ros",port_realDataToKRL_ros).doc("");
-    this->ports()->addPort("realDataFromKRL_ros",port_realDataFromKRL_ros).doc("");
-    this->ports()->addPort("boolDataFromKRL_ros",port_boolDataFromKRL_ros).doc("");
     this->ports()->addPort("toKRL",port_toKRL).doc("Struct defined in friComm.h to send to the KRL Program");
     this->ports()->addEventPort("fromKRL",port_fromKRL).doc("Struct defined in friComm.h to read from KRL Program");
     this->ports()->addPort("JointImpedanceCommand",port_JointImpedanceCommand).doc("");
 
-    this->addOperation("setJointImpedanceControlMode",&KRLTool::setJointImpedanceControlMode,this);
-    this->addOperation("setJointTorqueControlMode",&KRLTool::setJointTorqueControlMode,this);
-    this->addOperation("setJointPositionControlMode",&KRLTool::setJointPositionControlMode,this);
-    this->addOperation("setCartesianImpedanceControlMode",&KRLTool::setCartesianImpedanceControlMode,this);
-
-    this->addOperation("setJointImpedanceControlModeROSService",&KRLTool::setJointImpedanceControlModeROSService,this);
-    this->addOperation("setJointTorqueControlModeROSService",&KRLTool::setJointTorqueControlModeROSService,this);
-    this->addOperation("setJointPositionControlModeROSService",&KRLTool::setJointPositionControlModeROSService,this);
-    this->addOperation("setCartesianImpedanceControlModeROSService",&KRLTool::setCartesianImpedanceControlModeROSService,this);
-
-    this->addOperation("getCurrentControlModeROSService",&KRLTool::getCurrentControlModeROSService,this);
+    // this->ports()->addPort("intDataToKRL_ros",port_intDataToKRL_ros).doc("");
+    // this->ports()->addPort("intDataFromKRL_ros",port_intDataFromKRL_ros).doc("");
+    // this->ports()->addPort("realDataToKRL_ros",port_realDataToKRL_ros).doc("");
+    // this->ports()->addPort("realDataFromKRL_ros",port_realDataFromKRL_ros).doc("");
+    // this->ports()->addPort("boolDataFromKRL_ros",port_boolDataFromKRL_ros).doc("");
+    //
+    // this->addOperation("setJointImpedanceControlMode",&KRLTool::setJointImpedanceControlMode,this);
+    // this->addOperation("setJointTorqueControlMode",&KRLTool::setJointTorqueControlMode,this);
+    // this->addOperation("setJointPositionControlMode",&KRLTool::setJointPositionControlMode,this);
+    // this->addOperation("setCartesianImpedanceControlMode",&KRLTool::setCartesianImpedanceControlMode,this);
+    //
+    // this->addOperation("setJointImpedanceControlModeROSService",&KRLTool::setJointImpedanceControlModeROSService,this);
+    // this->addOperation("setJointTorqueControlModeROSService",&KRLTool::setJointTorqueControlModeROSService,this);
+    // this->addOperation("setJointPositionControlModeROSService",&KRLTool::setJointPositionControlModeROSService,this);
+    // this->addOperation("setCartesianImpedanceControlModeROSService",&KRLTool::setCartesianImpedanceControlModeROSService,this);
+    //
+    // this->addOperation("getCurrentControlModeROSService",&KRLTool::getCurrentControlModeROSService,this);
     this->addOperation("getCurrentControlMode",&KRLTool::getCurrentControlMode,this);
 
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this);
     this->addOperation("setStiffnessZero",&KRLTool::setStiffnessZero,this);
-    this->addOperation("PTP",&KRLTool::PTP,this);
-    this->addOperation("PTP_REL",&KRLTool::PTP_REL,this);
-    this->addOperation("LIN",&KRLTool::LIN,this);
-    this->addOperation("LIN_REL",&KRLTool::LIN_REL,this);
+    // this->addOperation("PTP",&KRLTool::PTP,this);
+    // this->addOperation("PTP_REL",&KRLTool::PTP_REL,this);
+    // this->addOperation("LIN",&KRLTool::LIN,this);
+    // this->addOperation("LIN_REL",&KRLTool::LIN_REL,this);
     this->addOperation("printBool",&KRLTool::printBool,this);
     this->addOperation("printInt",&KRLTool::printInt,this);
     this->addOperation("printReal",&KRLTool::printReal,this);
@@ -75,35 +76,34 @@ is_joint_torque_control_mode(false)
 // Called by ptp_action_server_ when a new goal is received
 void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
 {
-    if(gh.getGoal()->ptp_goal_rad.size() != LBR_MNJ)
-    {
-        log(Error) << "ptp goal size is wrong ("<<gh.getGoal()->ptp_goal_rad.size()<<", but should be "<<LBR_MNJ<<")"<<endlog();
-        return;
-    }
-    if(gh.getGoal()->ptp_goal_rad.size() != gh.getGoal()->ptp_mask.size())
-    {
-        log(Warning) << "The mask is not the same size as the goal ("<<gh.getGoal()->ptp_goal_rad.size()<<" vs "<<gh.getGoal()->ptp_mask.size()<<")"<<endlog();
-        return;
-    }
     std::vector<double> ptp_cmd(LBR_MNJ,0.0);
     std::vector<double> ptp_mask(LBR_MNJ,0);
-    for(int i=0;i<ptp_cmd.size();++i)
+
+    for(int i=0;i<ptp_cmd.size()
+    && i<gh.getGoal()->ptp_mask.size()
+    && i<gh.getGoal()->ptp_goal.size();++i)
     {
         if(gh.getGoal()->ptp_mask[i])
         {
             ptp_mask[i] = 1;
-            ptp_cmd[i] = gh.getGoal()->ptp_goal_rad[i];
+            ptp_cmd[i] = gh.getGoal()->ptp_goal[i];
         }
     }
-    if(gh.getGoal()->use_relative)
-    {
-        log(Warning) << "Sending new PTP_REL Command "<<endlog();
-    }
-    else
-    {
-        log(Warning) << "Sending new PTP Command "<<endlog();
-    }
-    this->PointToPoint(ptp_cmd,ptp_mask,true,gh.getGoal()->use_relative,gh.getGoal()->vel_percent);
+
+    log(Warning) << "Sending new PTP"<<(gh.getGoal()->use_relative ? "_REL":"")
+    <<" Command using "<<(gh.getGoal()->ptp_input_type == JOINT ? "Joints":" Cartesian")<<endlog();
+
+    this->PointToPoint(
+        ptp_cmd,
+        ptp_mask,
+        gh.getGoal()->XYZ,
+        gh.getGoal()->RPY,
+        gh.getGoal()->use_radians,
+        gh.getGoal()->ptp_input_type,
+        gh.getGoal()->use_relative,
+        gh.getGoal()->vel_percent
+    );
+
     gh.setAccepted();
     ptp_current_gh = gh;
 }
@@ -139,19 +139,8 @@ void KRLTool::LINcancelCallback(LINGoalHandle gh)
     }
 }
 
-void KRLTool::LIN(const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& RPY_rad)
-{
-    Linear(XYZ_meters,RPY_rad,false);
-}
-
-void KRLTool::LIN_REL(const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& RPY_rad)
-{
-    Linear(XYZ_meters,RPY_rad,true);
-}
-
-void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
+void KRLTool::Linear(
+    const geometry_msgs::Vector3& XYZ_meters,
     const geometry_msgs::Vector3& RPY_rad,
     bool use_lin_rel)
 {
@@ -163,7 +152,7 @@ void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
         conv = 180.0/3.14159265359;
 
     setBit(toKRL.boolData,LIN_CMD,true);
-    toKRL.intData[LIN_CMD_TYPE] = use_lin_rel;
+
     toKRL.realData[X] = XYZ_meters.x * 1000.0;
     toKRL.realData[Y] = XYZ_meters.y * 1000.0;
     toKRL.realData[Z] = XYZ_meters.z * 1000.0;
@@ -171,6 +160,9 @@ void KRLTool::Linear(const geometry_msgs::Vector3& XYZ_meters,
     toKRL.realData[A] = RPY_rad.z * conv;
     toKRL.realData[B] = RPY_rad.y * conv;
     toKRL.realData[C] = RPY_rad.x * conv;
+
+    toKRL.intData[CMD_INPUT_TYPE] = CARTESIAN;
+    toKRL.intData[USE_RELATIVE] = use_lin_rel;
     doUpdate();
 }
 
@@ -363,34 +355,24 @@ bool KRLTool::setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest&
     log(Info) << "KRLTool::setCartesianImpedanceControlModeROSService" << endlog();
     setCartesianImpedanceControlMode();
 }
-void KRLTool::PTP_REL(const std::vector<double>& ptp,
-    const std::vector<double>& mask,
-    bool use_radians,
-    double vel_ptp)
-{
-    PointToPoint(ptp,mask,use_radians,true,vel_ptp);
-}
-void KRLTool::PTP(const std::vector<double>& ptp,
-    const std::vector<double>& mask,
-    bool use_radians,
-    double vel_ptp)
-{
-    PointToPoint(ptp,mask,use_radians,false,vel_ptp);
-}
 
-void KRLTool::PointToPoint(const std::vector<double>& ptp,
+void KRLTool::PointToPoint(
+    const std::vector<double>& ptp,
     const std::vector<double>& mask,
+    const geometry_msgs::Vector3& XYZ,
+    const geometry_msgs::Vector3& RPY,
     bool use_radians,
+    int ptp_input_type,
     bool use_ptp_rel,
     double vel_ptp)
 {
-    if(ptp.size() != LBR_MNJ)
+    if(ptp_input_type == JOINT && ptp.size() != LBR_MNJ)
     {
         log(Error) << "KRLTool::PTP : ptp vector size is "<<ptp.size()<<" but should be "<<LBR_MNJ<< endlog();
         return;
     }
 
-    if(mask.size() != LBR_MNJ)
+    if(ptp_input_type == JOINT && mask.size() != LBR_MNJ)
     {
         log(Error) << "KRLTool::PTP : mask size is "<<mask.size()<<" but should be "<<LBR_MNJ<< endlog();
         return;
@@ -401,23 +383,40 @@ void KRLTool::PointToPoint(const std::vector<double>& ptp,
     if(use_radians)
         conv = 180.0/3.14159265359;
 
-    toKRL.intData[PTP_CMD_TYPE] = use_ptp_rel;
-    toKRL.realData[A1] = conv * ptp[0];
-    toKRL.realData[A2] = (use_ptp_rel ? 0.0:90.0) + conv * ptp[1];
-    toKRL.realData[E1] = conv * ptp[2];
-    toKRL.realData[A3] = conv * ptp[3];
-    toKRL.realData[A4] = conv * ptp[4];
-    toKRL.realData[A5] = conv * ptp[5];
-    toKRL.realData[A6] = conv * ptp[6];
-    setBit(toKRL.boolData,MASK_0,mask[0]);
-    setBit(toKRL.boolData,MASK_1,mask[1]);
-    setBit(toKRL.boolData,MASK_2,mask[2]);
-    setBit(toKRL.boolData,MASK_3,mask[3]);
-    setBit(toKRL.boolData,MASK_4,mask[4]);
-    setBit(toKRL.boolData,MASK_5,mask[5]);
-    setBit(toKRL.boolData,MASK_6,mask[6]);
+    switch(ptp_input_type)
+    {
+        case JOINT:
+            toKRL.realData[A1] = conv * ptp[0];
+            toKRL.realData[A2] = (use_ptp_rel ? 0.0:90.0) + conv * ptp[1];
+            toKRL.realData[E1] = conv * ptp[2];
+            toKRL.realData[A3] = conv * ptp[3];
+            toKRL.realData[A4] = conv * ptp[4];
+            toKRL.realData[A5] = conv * ptp[5];
+            toKRL.realData[A6] = conv * ptp[6];
+            setBit(toKRL.boolData,MASK_0,mask[0]);
+            setBit(toKRL.boolData,MASK_1,mask[1]);
+            setBit(toKRL.boolData,MASK_2,mask[2]);
+            setBit(toKRL.boolData,MASK_3,mask[3]);
+            setBit(toKRL.boolData,MASK_4,mask[4]);
+            setBit(toKRL.boolData,MASK_5,mask[5]);
+            setBit(toKRL.boolData,MASK_6,mask[6]);
+        break;
 
+        case CARTESIAN:
+            toKRL.realData[X] = XYZ.x * 1000.0;
+            toKRL.realData[Y] = XYZ.y * 1000.0;
+            toKRL.realData[Z] = XYZ.z * 1000.0;
+            // WARNING: A is rotation around Z , B around Y, C around X
+            toKRL.realData[A] = RPY.z * conv;
+            toKRL.realData[B] = RPY.y * conv;
+            toKRL.realData[C] = RPY.x * conv;
+        break;
+    }
+
+    toKRL.intData[CMD_INPUT_TYPE] = ptp_input_type;
     setBit(toKRL.boolData,PTP_CMD,true);
+    toKRL.intData[USE_RELATIVE] = use_ptp_rel;
+
     doUpdate();
 }
 
