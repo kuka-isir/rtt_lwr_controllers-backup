@@ -1,8 +1,8 @@
-&ACCESS RVEO
-&REL 49
+&ACCESS RVO
+&REL 48
 &COMMENT ISIR-CNRS 2016
-&PARAM tool_number = 10
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
+&PARAM tool_number = 10
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM fri_rate_ms = 1.0
 &PARAM base_number = 0
@@ -178,20 +178,21 @@ repeat
 
     switch input_type
     case 0
-      BuildJntCmdFromFRI()
+
       if(use_rel) then
-        PTP_REL JOINT_CMD
+        PTP_REL BuildJntCmdFromFRI(true)
       else
-        PTP CLAMP_AXES(JOINT_CMD)
+        PTP BuildJntCmdFromFRI(false)
       endif
 
     case 1
-      BuildCartCmdFromFRI()
+
       if(use_rel) then
-        PTP_REL CART_CMD
+        PTP_REL BuildCartCmdFromFRI()
       else
-        PTP CART_CMD
+        PTP BuildCartCmdFromFRI()
       endif
+
     endswitch
 
   endif
@@ -208,12 +209,10 @@ repeat
 
     $MSG_T.VALID = TRUE
 
-    BuildCartCmdFromFRI()
-
     if(use_rel) then
-      LIN_REL CART_CMD
+      LIN_REL BuildCartCmdFromFRI()
     else
-      LIN CART_CMD
+      LIN BuildCartCmdFromFRI()
     endif
 
   endif
@@ -261,74 +260,78 @@ DEFFCT BOOL isZeroStiffness(s:IN)
   return false
 ENDFCT
 
-DEF BuildJntCmdFromFRI()
+DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
+  DECL E6AXIS JOINT_OUT
+  BOOL use_relative
 
-  if(use_rel) then
-    JOINT_CMD = {A1 0.0, A2 0.0, E1 0.0, A3 0.0, A4 0.0, A5 0.0, A6 0.0}
+  if(use_relative) then
+    JOINT_OUT = {A1 0.0, A2 0.0, E1 0.0, A3 0.0, A4 0.0, A5 0.0, A6 0.0}
   else
-    JOINT_CMD = CLAMP_AXES($AXIS_ACT)
+    JOINT_OUT = CLAMP_AXES($AXIS_ACT)
   endif
 
   if( $fri_frm_bool[10] ) then
-    JOINT_CMD.A1 = $fri_frm_rea[10]
+    JOINT_OUT.A1 = $fri_frm_rea[10]
   endif
 
   if( $fri_frm_bool[11] ) then
-    JOINT_CMD.A2 = $fri_frm_rea[11]
+    JOINT_OUT.A2 = $fri_frm_rea[11]
   endif
 
   if( $fri_frm_bool[12] ) then
-    JOINT_CMD.E1 = $fri_frm_rea[12]
+    JOINT_OUT.E1 = $fri_frm_rea[12]
   endif
 
   if( $fri_frm_bool[13] ) then
-    JOINT_CMD.A3 = $fri_frm_rea[13]
+    JOINT_OUT.A3 = $fri_frm_rea[13]
   endif
 
   if( $fri_frm_bool[14] ) then
-    JOINT_CMD.A4 = $fri_frm_rea[14]
+    JOINT_OUT.A4 = $fri_frm_rea[14]
   endif
 
   if( $fri_frm_bool[15] ) then
-    JOINT_CMD.A5 = $fri_frm_rea[15]
+    JOINT_OUT.A5 = $fri_frm_rea[15]
   endif
 
   if( $fri_frm_bool[16] ) then
-    JOINT_CMD.A6 = $fri_frm_rea[16]
+    JOINT_OUT.A6 = $fri_frm_rea[16]
   endif
-END
 
-DEF BuildCartCmdFromFRI()
+  return CLAMP_AXES(JOINT_OUT)
+ENDFCT
 
-  if(use_rel) then
-    CART_CMD = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
-  endif
+DEFFCT E6POS BuildCartCmdFromFRI()
+  DECL E6POS CART_OUT
+
+  CART_OUT = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
 
   if( $fri_frm_bool[10] OR use_rel) then
-    CART_CMD.X = $fri_frm_rea[1]
+    CART_OUT.X = $fri_frm_rea[1]
   endif
 
   if( $fri_frm_bool[11] OR use_rel ) then
-    CART_CMD.Y = $fri_frm_rea[2]
+    CART_OUT.Y = $fri_frm_rea[2]
   endif
 
   if( $fri_frm_bool[12] OR use_rel ) then
-    CART_CMD.Z = $fri_frm_rea[3]
+    CART_OUT.Z = $fri_frm_rea[3]
   endif
 
   if( $fri_frm_bool[13] OR use_rel ) then
-    CART_CMD.A = $fri_frm_rea[4]
+    CART_OUT.A = $fri_frm_rea[4]
   endif
 
   if( $fri_frm_bool[14] OR use_rel ) then
-    CART_CMD.B = $fri_frm_rea[5]
+    CART_OUT.B = $fri_frm_rea[5]
   endif
 
   if( $fri_frm_bool[15] OR use_rel ) then
-    CART_CMD.C = $fri_frm_rea[6]
+    CART_OUT.C = $fri_frm_rea[6]
   endif
 
-END
+  return CART_OUT
+ENDFCT
 
 def do_stop2()
 
