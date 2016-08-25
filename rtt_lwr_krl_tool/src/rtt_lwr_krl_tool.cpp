@@ -52,6 +52,7 @@ is_joint_torque_control_mode(false)
     this->addOperation("setVELPercent",&KRLTool::setVELPercent,this);
     this->addOperation("sendSTOP2_srv",&KRLTool::sendSTOP2_srv,this);
     this->addOperation("unsetSTOP2_srv",&KRLTool::unsetSTOP2_srv,this);
+    this->addOperation("setMaxVelPercent",&KRLTool::setMaxVelPercent,this);
     this->addAttribute("doUpdate",do_update);
 
     for(unsigned int i=0;i<FRI_USER_SIZE;i++)
@@ -284,13 +285,31 @@ bool KRLTool::configureHook()
     {
         rosservice->connect("sendSTOP2_srv",this->getName()+"/send_stop2","std_srvs/Empty");
         rosservice->connect("unsetSTOP2_srv",this->getName()+"/unset_stop2","std_srvs/Empty");
+        rosservice->connect("setMaxVelPercent",this->getName()+"/set_max_vel_percent","krl_msgs/SetMaxVelPercent");
     }
     else
     {
         RTT::log(RTT::Warning) << "ROSService not available" << RTT::endlog();
     }
+
+    // lin_action_server_.initialize();
+    // ptp_action_server_.initialize();
+    // int n=30;
+    // while(!lin_action_server_.ready() && !ptp_action_server_.ready())
+    // {
+    //     if(!--n) break;
+    //     usleep(1E6);
+    // }
+
     return true;
 }
+
+bool KRLTool::setMaxVelPercent(krl_msgs::SetMaxVelPercentRequest& req,krl_msgs::SetMaxVelPercentResponse& resp)
+{
+    setVELPercent(req.max_vel_percent);
+    return true;
+}
+
 bool KRLTool::getCurrentControlModeROSService(std_srvs::TriggerRequest& req,std_srvs::TriggerResponse& resp)
 {
     resp.success = true;

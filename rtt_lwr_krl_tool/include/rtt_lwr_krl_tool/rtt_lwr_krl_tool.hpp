@@ -33,6 +33,7 @@
 
 #include <krl_msgs/PTPAction.h>
 #include <krl_msgs/LINAction.h>
+#include <krl_msgs/SetMaxVelPercent.h>
 
 #include <rtt_actionlib/rtt_action_server.h>
 
@@ -117,7 +118,7 @@ protected:
     void setVELPercent(float vel_percent);
     bool sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
     bool unsetSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
-
+    bool setMaxVelPercent(krl_msgs::SetMaxVelPercentRequest& req,krl_msgs::SetMaxVelPercentResponse& resp);
     void setJointImpedanceControlMode();
     void setCartesianImpedanceControlMode();
     void setJointPositionControlMode();
