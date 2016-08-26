@@ -17,23 +17,23 @@ is_joint_torque_control_mode(false)
     this->ports()->addEventPort("fromKRL",port_fromKRL).doc("Struct defined in friComm.h to read from KRL Program");
     this->ports()->addPort("JointImpedanceCommand",port_JointImpedanceCommand).doc("");
 
-    // this->ports()->addPort("intDataToKRL_ros",port_intDataToKRL_ros).doc("");
-    // this->ports()->addPort("intDataFromKRL_ros",port_intDataFromKRL_ros).doc("");
-    // this->ports()->addPort("realDataToKRL_ros",port_realDataToKRL_ros).doc("");
-    // this->ports()->addPort("realDataFromKRL_ros",port_realDataFromKRL_ros).doc("");
-    // this->ports()->addPort("boolDataFromKRL_ros",port_boolDataFromKRL_ros).doc("");
-    //
-    // this->addOperation("setJointImpedanceControlMode",&KRLTool::setJointImpedanceControlMode,this);
-    // this->addOperation("setJointTorqueControlMode",&KRLTool::setJointTorqueControlMode,this);
-    // this->addOperation("setJointPositionControlMode",&KRLTool::setJointPositionControlMode,this);
-    // this->addOperation("setCartesianImpedanceControlMode",&KRLTool::setCartesianImpedanceControlMode,this);
-    //
-    // this->addOperation("setJointImpedanceControlModeROSService",&KRLTool::setJointImpedanceControlModeROSService,this);
-    // this->addOperation("setJointTorqueControlModeROSService",&KRLTool::setJointTorqueControlModeROSService,this);
-    // this->addOperation("setJointPositionControlModeROSService",&KRLTool::setJointPositionControlModeROSService,this);
-    // this->addOperation("setCartesianImpedanceControlModeROSService",&KRLTool::setCartesianImpedanceControlModeROSService,this);
-    //
-    // this->addOperation("getCurrentControlModeROSService",&KRLTool::getCurrentControlModeROSService,this);
+    this->ports()->addPort("intDataToKRL_ros",port_intDataToKRL_ros).doc("");
+    this->ports()->addPort("intDataFromKRL_ros",port_intDataFromKRL_ros).doc("");
+    this->ports()->addPort("realDataToKRL_ros",port_realDataToKRL_ros).doc("");
+    this->ports()->addPort("realDataFromKRL_ros",port_realDataFromKRL_ros).doc("");
+    this->ports()->addPort("boolDataFromKRL_ros",port_boolDataFromKRL_ros).doc("");
+
+    this->addOperation("setJointImpedanceControlMode",&KRLTool::setJointImpedanceControlMode,this);
+    this->addOperation("setJointTorqueControlMode",&KRLTool::setJointTorqueControlMode,this);
+    this->addOperation("setJointPositionControlMode",&KRLTool::setJointPositionControlMode,this);
+    this->addOperation("setCartesianImpedanceControlMode",&KRLTool::setCartesianImpedanceControlMode,this);
+
+    this->addOperation("setJointImpedanceControlModeROSService",&KRLTool::setJointImpedanceControlModeROSService,this);
+    this->addOperation("setJointTorqueControlModeROSService",&KRLTool::setJointTorqueControlModeROSService,this);
+    this->addOperation("setJointPositionControlModeROSService",&KRLTool::setJointPositionControlModeROSService,this);
+    this->addOperation("setCartesianImpedanceControlModeROSService",&KRLTool::setCartesianImpedanceControlModeROSService,this);
+
+    this->addOperation("getCurrentControlModeROSService",&KRLTool::getCurrentControlModeROSService,this);
     this->addOperation("getCurrentControlMode",&KRLTool::getCurrentControlMode,this);
 
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this);
