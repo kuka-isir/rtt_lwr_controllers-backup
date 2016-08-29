@@ -49,9 +49,9 @@ enum FRI_COMMAND
 
 enum FRI_REAL_DATA_DESCRIPTION
 {
-    X = 0, // x in meters
-    Y, // y in meters
-    Z, // z in meters
+    X = 0, // x in millimeters
+    Y, // y in millimeters
+    Z, // z in millimeters
     A, // rotation around Z in degrees
     B, // rotation around Y in degrees
     C, // rotation around X in degrees
@@ -65,6 +65,26 @@ enum FRI_REAL_DATA_DESCRIPTION
     A4, // Joint 4 in degrees
     A5, // Joint 5 in degrees
     A6  // Joint 6 in degrees
+};
+
+enum FRI_REAL_DATA_FROM_KRL_DESCRIPTION
+{
+    BASE_X = 0, // x in millimeters
+    BASE_Y, // y in millimeters
+    BASE_Z, // z in millimeters
+    BASE_A, // rotation around Z in degrees
+    BASE_B, // rotation around Y in degrees
+    BASE_C, // rotation around X in degrees
+    POS_ACT_X,
+    POS_ACT_Y,
+    POS_ACT_Z,
+    AXIS_ACT_A1, // Joint 0 in degrees
+    AXIS_ACT_A2, // Joint 1 in degrees
+    AXIS_ACT_E1, // Joint 2 in degrees
+    AXIS_ACT_A3, // Joint 3 in degrees
+    AXIS_ACT_A4, // Joint 4 in degrees
+    AXIS_ACT_A5, // Joint 5 in degrees
+    AXIS_ACT_A6  // Joint 6 in degrees
 };
 
 }
