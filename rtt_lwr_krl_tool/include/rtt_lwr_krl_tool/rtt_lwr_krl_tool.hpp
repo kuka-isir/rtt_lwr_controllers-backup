@@ -68,6 +68,9 @@ private:
     krl_msgs::PTPResult ptp_result;
     LINGoalHandle lin_current_gh;
     krl_msgs::LINResult lin_result;
+    // krl_msgs::LINFeedback lin_feedback;
+    // krl_msgs::PTPFeedback ptp_feedback;
+    // std::vector<float> startPTP,startLIN;
 
 public:
     KRLTool(const std::string& name);

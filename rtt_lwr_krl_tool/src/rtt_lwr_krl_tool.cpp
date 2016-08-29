@@ -11,6 +11,8 @@ KRLTool::KRLTool(const std::string& name):
 TaskContext(name),
 do_update(false),
 do_send_imp_cmd(false),
+// startPTP(LBR_MNJ),
+// startLIN(3),
 is_joint_torque_control_mode(false)
 {
     this->ports()->addPort("toKRL",port_toKRL).doc("Struct defined in friComm.h to send to the KRL Program");
@@ -76,6 +78,12 @@ is_joint_torque_control_mode(false)
 // Called by ptp_action_server_ when a new goal is received
 void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
 {
+    if(ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
+    && !(ptp_current_gh == gh && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)) {
+      gh.setRejected();
+      log(Warning) << "Rejecting Goal "<<gh.getGoal()<<" because another one is active"<<endlog();
+      return;
+    }
     std::vector<double> ptp_cmd(LBR_MNJ,0.0);
     std::vector<double> ptp_mask(LBR_MNJ,0);
 
@@ -104,6 +112,9 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
         gh.getGoal()->vel_percent
     );
 
+    // for(int i = 0;i<LBR_MNJ;i++)
+    //     startPTP[i] = fromKRL.realData[AXIS_ACT_A1 + i];
+
     gh.setAccepted();
     ptp_current_gh = gh;
 }
@@ -118,14 +129,24 @@ void KRLTool::PTPcancelCallback(PTPGoalHandle gh)
 
 void KRLTool::LINgoalCallback(LINGoalHandle gh)
 {
+    if(lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
+    && ! (ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)) {
+      gh.setRejected();
+      log(Warning) << "Rejecting LIN Goal "<<gh.getGoal()<<" because another one is active"<<endlog();
+      return;
+    }
     if(gh.getGoal()->use_relative)
     {
-        log(Warning) << "Sending new LIN_REL Command "<<endlog();
+        log(Warning) << "Sending new LIN"<<(gh.getGoal()->use_relative ? "_REL":"")<<" Command "<<endlog();
     }
     else
     {
         log(Warning) << "Sending new LIN Command "<<endlog();
     }
+
+    // for(int i = 0;i<3;i++)
+    //     startLIN[i] = fromKRL.realData[POS_ACT_X + i];
+
     Linear(gh.getGoal()->XYZ,gh.getGoal()->RPY,gh.getGoal()->use_relative);
     gh.setAccepted();
     lin_current_gh = gh;
@@ -529,6 +550,34 @@ void KRLTool::updateHook()
         }
         else
         {
+            // std::vector<float> d_lin(3);
+            // std::vector<float> d_ptp(LBR_MNJ);
+            //
+            // for(int i=0;i<LBR_MNJ;i++)
+            //     if(toKRL.realData[A1+i] > startPTP[i])
+            //         d_ptp[i] = 100.0*(fromKRL.realData[AXIS_ACT_A1 + i]-startPTP[i])/(toKRL.realData[A1+i]-startPTP[i]);
+            //     else
+            //         d_ptp[i] = 100.0*(fromKRL.realData[AXIS_ACT_A1 + i]-toKRL.realData[A1+i])/(startPTP[i] - toKRL.realData[A1+i]);
+            //
+            // for(int i=0;i<3;i++)
+            //     if(toKRL.realData[X+i] > startLIN[i])
+            //         d_lin[i] = 100.0*(fromKRL.realData[POS_ACT_X+i] - startLIN[i])/(toKRL.realData[X+i]-startLIN[i]);
+            //     else
+            //         d_lin[i] = 100.0*(fromKRL.realData[POS_ACT_X+i] - toKRL.realData[X+i])/(startLIN[i]-toKRL.realData[X+i]);
+            //
+            // if(ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+            // {
+            //     if(ptp_current_gh.getGoal()->ptp_input_type == JOINT)
+            //         ptp_feedback.percent_complete = *std::min_element(d_ptp.begin(),d_ptp.end());
+            //     else
+            //         ptp_feedback.percent_complete = *std::min_element(d_lin.begin(),d_lin.end());
+            //     ptp_current_gh.publishFeedback(ptp_feedback);
+            // }
+            // if(lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+            // {
+            //     lin_feedback.percent_complete = *std::min_element(d_lin.begin(),d_lin.end());
+            //     lin_current_gh.publishFeedback(lin_feedback);
+            // }
             // Request an update
             setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
             // printBool();
