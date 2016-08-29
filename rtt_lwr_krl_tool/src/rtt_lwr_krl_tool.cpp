@@ -182,6 +182,13 @@ void KRLTool::Linear(
     toKRL.realData[B] = RPY_rad.y * conv;
     toKRL.realData[C] = RPY_rad.x * conv;
 
+    setBit(toKRL.boolData,MASK_0,true);
+    setBit(toKRL.boolData,MASK_1,true);
+    setBit(toKRL.boolData,MASK_2,true);
+    setBit(toKRL.boolData,MASK_3,true);
+    setBit(toKRL.boolData,MASK_4,true);
+    setBit(toKRL.boolData,MASK_5,true);
+    
     toKRL.intData[CMD_INPUT_TYPE] = CARTESIAN;
     toKRL.intData[USE_RELATIVE] = use_lin_rel;
     doUpdate();
@@ -431,6 +438,13 @@ void KRLTool::PointToPoint(
             toKRL.realData[A] = RPY.z * conv;
             toKRL.realData[B] = RPY.y * conv;
             toKRL.realData[C] = RPY.x * conv;
+
+            setBit(toKRL.boolData,MASK_0,true);
+            setBit(toKRL.boolData,MASK_1,true);
+            setBit(toKRL.boolData,MASK_2,true);
+            setBit(toKRL.boolData,MASK_3,true);
+            setBit(toKRL.boolData,MASK_4,true);
+            setBit(toKRL.boolData,MASK_5,true);
         break;
     }
 

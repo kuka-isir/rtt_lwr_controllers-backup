@@ -1,5 +1,5 @@
 &ACCESS RVP
-&REL 52
+&REL 53
 &COMMENT ISIR-CNRS 2016
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM tool_number = 10
@@ -39,13 +39,16 @@ INTERRUPT ON 6
 ;ENDFOLD (INI)
 
 ; Script Parameters
-tool_number = 5
+tool_number = 10
 fri_rate_ms = 1.0
 start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 
 ;FOLD FRI Reset()
-ret=fristop()
-ret=friclose()
+
+if ($FriState <> #OFF) then
+  ret=fristop()
+  ret=friclose()
+endif
 
 $fri_to_int[1] = 0
 $fri_to_int[2] = 10
@@ -53,10 +56,10 @@ $fri_to_int[3] = tool_number
 
 resetRobotParams()
 
-BAS(#TOOL,tool_number)
-$STIFFNESS.TOOL = $TOOL
-$STIFFNESS.BASE = $BASE
-$STIFFNESS.COMMIT=TRUE
+;BAS(#TOOL,tool_number)
+;$STIFFNESS.TOOL = $TOOL
+;$STIFFNESS.BASE = $BASE
+;$STIFFNESS.COMMIT=TRUE
 ;ENDFOLD
 
 ;Goto Zero Position
@@ -151,6 +154,7 @@ repeat
       $STIFFNESS.TOOL = $TOOL
       $STIFFNESS.BASE = $BASE
       $STIFFNESS.COMMIT=TRUE
+      $fri_to_int[3] = $fri_frm_int[3]
     endif
 
   endif
@@ -167,6 +171,7 @@ repeat
       $STIFFNESS.TOOL = $TOOL
       $STIFFNESS.BASE = $BASE
       $STIFFNESS.COMMIT=TRUE
+      $fri_to_int[4] = $fri_frm_int[4]
     endif
 
   endif
@@ -313,8 +318,10 @@ DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
   return CLAMP_AXES(JOINT_OUT)
 ENDFCT
 
-DEFFCT FRAME BuildCartCmdFromFRI()
-  DECL FRAME CART_OUT
+DEFFCT E6POS BuildCartCmdFromFRI()
+  DECL E6POS CART_OUT
+  ;DECL INT STRING_OFFSET
+  ;DECL STATE_T STATE
 
   CART_OUT = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
 
@@ -343,8 +350,17 @@ DEFFCT FRAME BuildCartCmdFromFRI()
   endif
 
   ;CART_OUT.E1 = 0.0
+  CART_OUT.S = 'B001'
+  CART_OUT.T = 'B100100'
   ;CART_OUT.E1 = $POS_ACT.E1
-
+  ;STRING_OFFSET = 0
+  ;SWRITE($MSG_T.KEY[], STATE, STRING_OFFSET, "POS(x %.2f, y %.2f, z %.2f)", CART_OUT.X,CART_OUT.Y,CART_OUT.Z)
+  ;$MSG_T.VALID = TRUE
+  ;wait for $MSG_T.VALID == FALSE
+  ;STRING_OFFSET = 0
+  ;SWRITE($MSG_T.KEY[], STATE, STRING_OFFSET, "POS(A %.2f, B %.2f, C %.2f)",CART_OUT.A,CART_OUT.B,CART_OUT.C)
+  ;$MSG_T.VALID = TRUE
+  ;wait for $MSG_T.VALID == FALSE
   return CART_OUT
 ENDFCT
 
