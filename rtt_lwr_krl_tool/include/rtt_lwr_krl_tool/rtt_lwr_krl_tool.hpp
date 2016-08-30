@@ -34,6 +34,9 @@
 #include <krl_msgs/PTPAction.h>
 #include <krl_msgs/LINAction.h>
 #include <krl_msgs/SetMaxVelPercent.h>
+#include <krl_msgs/SetTool.h>
+#include <krl_msgs/SetBase.h>
+#include <krl_msgs/SetToolBase.h>
 
 #include <rtt_actionlib/rtt_action_server.h>
 
@@ -78,6 +81,7 @@ public:
     void updateHook();
     bool configureHook();
     bool startHook();
+    void stopHook();
 
 // Actionlib Callbacks
 protected:
@@ -133,7 +137,13 @@ protected:
     void setVELPercent(float vel_percent);
     bool sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
     bool unsetSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp);
-    bool setMaxVelPercent(krl_msgs::SetMaxVelPercentRequest& req,krl_msgs::SetMaxVelPercentResponse& resp);
+
+    bool setMaxVelPercent_srv(krl_msgs::SetMaxVelPercentRequest& req,krl_msgs::SetMaxVelPercentResponse& resp);
+
+    bool setTool_srv(krl_msgs::SetToolRequest& req,krl_msgs::SetToolResponse& resp);
+    bool setBase_srv(krl_msgs::SetBaseRequest& req,krl_msgs::SetBaseResponse& resp);
+    bool setToolBase_srv(krl_msgs::SetToolBaseRequest& req,krl_msgs::SetToolBaseResponse& resp);
+
     void setJointImpedanceControlMode();
     void setCartesianImpedanceControlMode();
     void setJointPositionControlMode();

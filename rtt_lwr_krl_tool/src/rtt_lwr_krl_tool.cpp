@@ -55,7 +55,10 @@ is_joint_torque_control_mode(false)
     this->addOperation("setVELPercent",&KRLTool::setVELPercent,this);
     this->addOperation("sendSTOP2_srv",&KRLTool::sendSTOP2_srv,this);
     this->addOperation("unsetSTOP2_srv",&KRLTool::unsetSTOP2_srv,this);
-    this->addOperation("setMaxVelPercent",&KRLTool::setMaxVelPercent,this);
+    this->addOperation("setMaxVelPercent_srv",&KRLTool::setMaxVelPercent_srv,this);
+    this->addOperation("setTool_srv",&KRLTool::setTool_srv,this);
+    this->addOperation("setBase_srv",&KRLTool::setBase_srv,this);
+    this->addOperation("setToolBase_srv",&KRLTool::setToolBase_srv,this);
     this->addAttribute("doUpdate",do_update);
 
     for(unsigned int i=0;i<FRI_USER_SIZE;i++)
@@ -188,7 +191,7 @@ void KRLTool::Linear(
     setBit(toKRL.boolData,MASK_3,true);
     setBit(toKRL.boolData,MASK_4,true);
     setBit(toKRL.boolData,MASK_5,true);
-    
+
     toKRL.intData[CMD_INPUT_TYPE] = CARTESIAN;
     toKRL.intData[USE_RELATIVE] = use_lin_rel;
     doUpdate();
@@ -305,7 +308,10 @@ bool KRLTool::configureHook()
     {
         rosservice->connect("sendSTOP2_srv",this->getName()+"/send_stop2","std_srvs/Empty");
         rosservice->connect("unsetSTOP2_srv",this->getName()+"/unset_stop2","std_srvs/Empty");
-        rosservice->connect("setMaxVelPercent",this->getName()+"/set_max_vel_percent","krl_msgs/SetMaxVelPercent");
+        rosservice->connect("setMaxVelPercent_srv",this->getName()+"/set_max_vel_percent","krl_msgs/SetMaxVelPercent");
+        rosservice->connect("setTool_srv",this->getName()+"/set_tool","krl_msgs/SetTool");
+        rosservice->connect("setBase_srv",this->getName()+"/set_base","krl_msgs/SetBase");
+        rosservice->connect("setToolBase_srv",this->getName()+"/set_tool_base","krl_msgs/SetToolBase");
     }
     else
     {
@@ -323,8 +329,23 @@ bool KRLTool::configureHook()
 
     return true;
 }
-
-bool KRLTool::setMaxVelPercent(krl_msgs::SetMaxVelPercentRequest& req,krl_msgs::SetMaxVelPercentResponse& resp)
+bool KRLTool::setToolBase_srv(krl_msgs::SetToolBaseRequest& req,krl_msgs::SetToolBaseResponse& resp)
+{
+    setTool(req.tool_number);
+    setBase(req.base_number);
+    return true;
+}
+bool KRLTool::setTool_srv(krl_msgs::SetToolRequest& req,krl_msgs::SetToolResponse& resp)
+{
+    setTool(req.tool_number);
+    return true;
+}
+bool KRLTool::setBase_srv(krl_msgs::SetBaseRequest& req,krl_msgs::SetBaseResponse& resp)
+{
+    setBase(req.base_number);
+    return true;
+}
+bool KRLTool::setMaxVelPercent_srv(krl_msgs::SetMaxVelPercentRequest& req,krl_msgs::SetMaxVelPercentResponse& resp)
 {
     setVELPercent(req.max_vel_percent);
     return true;
@@ -451,7 +472,6 @@ void KRLTool::PointToPoint(
     toKRL.intData[CMD_INPUT_TYPE] = ptp_input_type;
     setBit(toKRL.boolData,PTP_CMD,true);
     toKRL.intData[USE_RELATIVE] = use_ptp_rel;
-
     doUpdate();
 }
 
@@ -638,6 +658,12 @@ void KRLTool::updateHook()
 //     port_realDataFromKRL_ros.write(realDataFromKRL);
 //     port_boolDataFromKRL_ros.write(boolDataFromKRL);
 
+}
+
+void KRLTool::stopHook()
+{
+    toKRL.boolData = 0;
+    port_toKRL.write(toKRL);
 }
 
 }
