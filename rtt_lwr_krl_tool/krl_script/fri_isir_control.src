@@ -1,8 +1,8 @@
-&ACCESS RVP
-&REL 53
+&ACCESS RVO
+&REL 57
 &COMMENT ISIR-CNRS 2016
-&PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM tool_number = 10
+&PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM fri_rate_ms = 1.0
 &PARAM base_number = 0
@@ -24,7 +24,7 @@ GLOBAL INTERRUPT DECL 5 WHEN $FRI_FRM_BOOL[9]==TRUE DO set_vel()
 INTERRUPT ON 5
 $TIMER_STOP[1] = TRUE
 $TIMER[1] = 0
-GLOBAL INTERRUPT DECL 6 WHEN $TIMER[1]>=100 DO write_status()
+GLOBAL INTERRUPT DECL 6 WHEN $ON_PATH DO write_status()
 INTERRUPT ON 6
 ;ENDFOLD (BASISTECH INI)
 ;FOLD USER INI
@@ -75,6 +75,15 @@ repeat
 until $FriState == #MON
 
 PTP start_pose
+
+;FOLD Publish BASE pose
+$fri_to_rea[1] = $BASE.X
+$fri_to_rea[2] = $BASE.Y
+$fri_to_rea[3] = $BASE.Z
+$fri_to_rea[4] = $BASE.A
+$fri_to_rea[5] = $BASE.B
+$fri_to_rea[6] = $BASE.C
+;ENDFOLD
 
 repeat
 
@@ -172,6 +181,14 @@ repeat
       $STIFFNESS.BASE = $BASE
       $STIFFNESS.COMMIT=TRUE
       $fri_to_int[4] = $fri_frm_int[4]
+      ;FOLD Publish BASE pose
+      $fri_to_rea[1] = $BASE.X
+      $fri_to_rea[2] = $BASE.Y
+      $fri_to_rea[3] = $BASE.Z
+      $fri_to_rea[4] = $BASE.A
+      $fri_to_rea[5] = $BASE.B
+      $fri_to_rea[6] = $BASE.C
+      ;ENDFOLD
     endif
 
   endif
@@ -234,17 +251,29 @@ repeat
   endif
   ;ENDFOLD
 
+  ;;FOLD Wait for Ack
   ; This wait is necessary otherwise it will execute
   ; the next set of instructions (!!)
-  WAIT SEC 0
+  WAIT SEC 0.0
 
+  ; Acknowledge all flags (set them to 1)
   for i=1 to 16
     if( (i <> 9) AND (i <> 8) ) then
       $fri_to_bool[i]=$fri_frm_bool[i]
     endif
   endfor
 
-  wait for ($fri_frm_bool[1] == false)
+  ; Send response
+  WAIT SEC 0.0
+
+  ; Wait for confirmation (all flags back to 0)
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) ) then
+      wait for ($fri_frm_bool[i] == false)
+    endif
+  endfor
+
+  ;;ENDFOLD
 
 until ($fri_frm_int[1] == 3)
 
@@ -318,8 +347,8 @@ DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
   return CLAMP_AXES(JOINT_OUT)
 ENDFCT
 
-DEFFCT E6POS BuildCartCmdFromFRI()
-  DECL E6POS CART_OUT
+DEFFCT POS BuildCartCmdFromFRI()
+  DECL POS CART_OUT
   ;DECL INT STRING_OFFSET
   ;DECL STATE_T STATE
 
@@ -350,8 +379,8 @@ DEFFCT E6POS BuildCartCmdFromFRI()
   endif
 
   ;CART_OUT.E1 = 0.0
-  CART_OUT.S = 'B001'
-  CART_OUT.T = 'B100100'
+  ;CART_OUT.S = 'B001'
+  ;CART_OUT.T = 'B100100'
   ;CART_OUT.E1 = $POS_ACT.E1
   ;STRING_OFFSET = 0
   ;SWRITE($MSG_T.KEY[], STATE, STRING_OFFSET, "POS(x %.2f, y %.2f, z %.2f)", CART_OUT.X,CART_OUT.Y,CART_OUT.Z)
@@ -391,30 +420,49 @@ endif
 
 end
 
+DEFFCT REAL CALC_COMPL(start_v:in,end_v:in,current_v:in)
+  REAL start_v
+  REAL end_v
+  REAL current_v
+  DECL REAL tmp
+  DECL REAL d
+
+  d = end_v - start_v
+
+  if(d == 0.0) then
+    return 1.0
+  endif
+
+  if(d < 0.0) then
+    start_v = abs(start_v)
+    end_v = abs(end_v)
+    current_v = abs(current_v)
+  endif
+
+  return (current_v - start_v ) / (end_v - start_v)
+ENDFCT
+
 def write_status()
-  $fri_to_rea[1] = $BASE.X
-  $fri_to_rea[2] = $BASE.Y
-  $fri_to_rea[3] = $BASE.Z
-  $fri_to_rea[4] = $BASE.A
-  $fri_to_rea[5] = $BASE.B
-  $fri_to_rea[6] = $BASE.C
+  ;$fri_to_rea[1] = $BASE.X
+  ;$fri_to_rea[2] = $BASE.Y
+  ;$fri_to_rea[3] = $BASE.Z
+  ;$fri_to_rea[4] = $BASE.A
+  ;$fri_to_rea[5] = $BASE.B
+  ;$fri_to_rea[6] = $BASE.C
 
-  $fri_to_rea[7] = $POS_ACT.X
-  $fri_to_rea[8] = $POS_ACT.Y
-  $fri_to_rea[9] = $POS_ACT.Z
-
-  $fri_to_rea[10] = $AXIS_ACT.A1
-  $fri_to_rea[11] = $AXIS_ACT.A2
-  $fri_to_rea[12] = $AXIS_ACT.E1
-  $fri_to_rea[13] = $AXIS_ACT.A3
-  $fri_to_rea[14] = $AXIS_ACT.A4
-  $fri_to_rea[15] = $AXIS_ACT.A5
-  $fri_to_rea[16] = $AXIS_ACT.A6
-
-  WAIT SEC 0
-  $TIMER_STOP[1] = TRUE
-  $TIMER[1] = 0
-  $TIMER_STOP[1] = FALSE
+  ;$fri_to_rea[7]  = CALC_COMPL($POS_BACK.X,  $POS_FOR.X,$POS_ACT.X)
+  ;$fri_to_rea[8]  = CALC_COMPL($POS_BACK.Y,  $POS_FOR.Y,$POS_ACT.Y)
+  ;$fri_to_rea[9]  = CALC_COMPL($POS_BACK.Z,  $POS_FOR.Z,$POS_ACT.Z)
+  ;
+  ;$fri_to_rea[10] = CALC_COMPL($AXIS_BACK.A1 ,$AXIS_FOR.A1,$AXIS_ACT.A1)
+  ;$fri_to_rea[11] = CALC_COMPL($AXIS_BACK.A2 ,$AXIS_FOR.A2,$AXIS_ACT.A2)
+  ;$fri_to_rea[12] = CALC_COMPL($AXIS_BACK.E1 ,$AXIS_FOR.E1,$AXIS_ACT.E1)
+  ;$fri_to_rea[13] = CALC_COMPL($AXIS_BACK.A3 ,$AXIS_FOR.A3,$AXIS_ACT.A3)
+  ;$fri_to_rea[14] = CALC_COMPL($AXIS_BACK.A4 ,$AXIS_FOR.A4,$AXIS_ACT.A4)
+  ;$fri_to_rea[15] = CALC_COMPL($AXIS_BACK.A5 ,$AXIS_FOR.A5,$AXIS_ACT.A5)
+  ;$fri_to_rea[16] = CALC_COMPL($AXIS_BACK.A6 ,$AXIS_FOR.A6,$AXIS_ACT.A6)
+  ;
+  ;INTERRUPT ON 6
 end
 
 DEF resetRobotParams( )

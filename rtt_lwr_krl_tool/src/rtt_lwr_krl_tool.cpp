@@ -9,7 +9,6 @@ using namespace krl;
 
 KRLTool::KRLTool(const std::string& name):
 TaskContext(name),
-do_update(false),
 do_send_imp_cmd(false),
 // startPTP(LBR_MNJ),
 // startLIN(3),
@@ -59,7 +58,6 @@ is_joint_torque_control_mode(false)
     this->addOperation("setTool_srv",&KRLTool::setTool_srv,this);
     this->addOperation("setBase_srv",&KRLTool::setBase_srv,this);
     this->addOperation("setToolBase_srv",&KRLTool::setToolBase_srv,this);
-    this->addAttribute("doUpdate",do_update);
 
     for(unsigned int i=0;i<FRI_USER_SIZE;i++)
     {
@@ -68,23 +66,16 @@ is_joint_torque_control_mode(false)
     }
     fromKRL.boolData = 0;
     toKRL.boolData = 0;
-    // Add action server ports to this task's root service
-    ptp_action_server_.addPorts(this->provides("PTP"));
-    lin_action_server_.addPorts(this->provides("LIN"));
 
-    // Bind action server goal and cancel callbacks (see below)
-    ptp_action_server_.registerGoalCallback(boost::bind(&KRLTool::PTPgoalCallback, this, _1));
-    ptp_action_server_.registerCancelCallback(boost::bind(&KRLTool::PTPcancelCallback, this, _1));
-    lin_action_server_.registerGoalCallback(boost::bind(&KRLTool::LINgoalCallback, this, _1));
-    lin_action_server_.registerCancelCallback(boost::bind(&KRLTool::LINcancelCallback, this, _1));
 }
 // Called by ptp_action_server_ when a new goal is received
 void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
 {
-    if(ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
-    && !(ptp_current_gh == gh && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)) {
+    if(lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
+    || ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+    {
       gh.setRejected();
-      log(Warning) << "Rejecting Goal "<<gh.getGoal()<<" because another one is active"<<endlog();
+      log(Warning) << "Rejecting PTP Goal "<<gh.getGoal()<<" because another one is active"<<endlog();
       return;
     }
     std::vector<double> ptp_cmd(LBR_MNJ,0.0);
@@ -132,20 +123,15 @@ void KRLTool::PTPcancelCallback(PTPGoalHandle gh)
 
 void KRLTool::LINgoalCallback(LINGoalHandle gh)
 {
-    if(lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
-    && ! (ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)) {
+    if(lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
+    || ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+    {
       gh.setRejected();
       log(Warning) << "Rejecting LIN Goal "<<gh.getGoal()<<" because another one is active"<<endlog();
       return;
     }
-    if(gh.getGoal()->use_relative)
-    {
-        log(Warning) << "Sending new LIN"<<(gh.getGoal()->use_relative ? "_REL":"")<<" Command "<<endlog();
-    }
-    else
-    {
-        log(Warning) << "Sending new LIN Command "<<endlog();
-    }
+
+    log(Warning) << "Sending new LIN"<<(gh.getGoal()->use_relative ? "_REL":"")<<" Command "<<endlog();
 
     // for(int i = 0;i<3;i++)
     //     startLIN[i] = fromKRL.realData[POS_ACT_X + i];
@@ -176,6 +162,7 @@ void KRLTool::Linear(
         conv = 180.0/3.14159265359;
 
     setBit(toKRL.boolData,LIN_CMD,true);
+    setBit(toKRL.boolData,PTP_CMD,false);
 
     toKRL.realData[X] = XYZ_meters.x * 1000.0;
     toKRL.realData[Y] = XYZ_meters.y * 1000.0;
@@ -194,19 +181,19 @@ void KRLTool::Linear(
 
     toKRL.intData[CMD_INPUT_TYPE] = CARTESIAN;
     toKRL.intData[USE_RELATIVE] = use_lin_rel;
-    doUpdate();
+    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 void KRLTool::sendSTOP2()
 {
     setBit(toKRL.boolData,STOP2,true);
-    doUpdate();
+    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 void KRLTool::unsetSTOP2()
 {
     setBit(toKRL.boolData,STOP2,false);
-    doUpdate();
+    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 bool KRLTool::sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp)
@@ -261,21 +248,21 @@ void KRLTool::setJointPositionControlMode()
 {
     toKRL.intData[CONTROL_MODE] = 10*FRI_CTRL_POSITION;
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
-    doUpdate();
+    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 void KRLTool::setJointImpedanceControlMode()
 {
     toKRL.intData[CONTROL_MODE] = FRI_CTRL_JNT_IMP*10;
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
-    doUpdate();
+    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 void KRLTool::setCartesianImpedanceControlMode()
 {
     toKRL.intData[CONTROL_MODE] = FRI_CTRL_CART_IMP*10;
     setBit(toKRL.boolData,SET_CONTROL_MODE,true);
-    doUpdate();
+    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 void KRLTool::setJointTorqueControlMode()
@@ -294,8 +281,8 @@ bool KRLTool::configureHook()
         realDataFromKRL.data.push_back(0.0);
         boolDataFromKRL.data.push_back(0);
     }
-    port_intDataToKRL_ros.createStream(rtt_roscomm::topic(getName()+"/intDataToKRL"));
-    port_realDataToKRL_ros.createStream(rtt_roscomm::topic(getName()+"/realDataToKRL"));
+    // port_intDataToKRL_ros.createStream(rtt_roscomm::topic(getName()+"/intDataToKRL"));
+    // port_realDataToKRL_ros.createStream(rtt_roscomm::topic(getName()+"/realDataToKRL"));
 
     port_intDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/intDataFromKRL"));
     port_realDataFromKRL_ros.createStream(rtt_roscomm::topic(getName()+"/realDataFromKRL"));
@@ -318,8 +305,20 @@ bool KRLTool::configureHook()
         RTT::log(RTT::Warning) << "ROSService not available" << RTT::endlog();
     }
 
-    // lin_action_server_.initialize();
-    // ptp_action_server_.initialize();
+    // Add action server ports to this task's root service
+    ptp_action_server_.addPorts(this->provides("PTP"));
+    lin_action_server_.addPorts(this->provides("LIN"));
+
+    ptp_current_gh.setRejected();
+    lin_current_gh.setRejected();
+
+    // Bind action server goal and cancel callbacks (see below)
+    ptp_action_server_.registerGoalCallback(boost::bind(&KRLTool::PTPgoalCallback, this, _1));
+    ptp_action_server_.registerCancelCallback(boost::bind(&KRLTool::PTPcancelCallback, this, _1));
+    lin_action_server_.registerGoalCallback(boost::bind(&KRLTool::LINgoalCallback, this, _1));
+    lin_action_server_.registerCancelCallback(boost::bind(&KRLTool::LINcancelCallback, this, _1));
+    lin_action_server_.initialize();
+    ptp_action_server_.initialize();
     // int n=30;
     // while(!lin_action_server_.ready() && !ptp_action_server_.ready())
     // {
@@ -471,21 +470,22 @@ void KRLTool::PointToPoint(
 
     toKRL.intData[CMD_INPUT_TYPE] = ptp_input_type;
     setBit(toKRL.boolData,PTP_CMD,true);
+    setBit(toKRL.boolData,LIN_CMD,false);
     toKRL.intData[USE_RELATIVE] = use_ptp_rel;
-    doUpdate();
+    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 void KRLTool::setBase(int base_number)
 {
   toKRL.intData[BASE] = base_number;
   setBit(toKRL.boolData,SET_BASE,true);
-  doUpdate();
+  setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 void KRLTool::setTool(int tool_number)
 {
   toKRL.intData[TOOL] = tool_number;
   setBit(toKRL.boolData,SET_TOOL,true);
-  doUpdate();
+  setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 void KRLTool::setVELPercent(float vel_percent)
 {
@@ -526,16 +526,34 @@ bool KRLTool::startHook() {
   return true;
 }
 
+bool KRLTool::hasKRLReset()
+{
+    for(int i=0;i<FRI_USER_SIZE;i++)
+    {
+        if(i==SET_VEL || i==STOP2)
+            continue;
+        if(getBit(fromKRL.boolData,i))
+            return false;
+    }
+    return true;
+}
+
 void KRLTool::updateHook()
 {
-    static bool has_sent_cmd = false;
+    static bool first_loop = true;
+    static bool has_cmd = false;
+    static fri_uint16_t to_krl_bool_data = 0;
+
+    if(!first_loop)
+        port_fromKRL.read(fromKRL);
+
     // Incoming ROS Int message
 //     if(port_intDataToKRL_ros.read(intDataToKRL) == NewData)
 //     {
 //         for(unsigned i=0;i<FRI_USER_SIZE && i<intDataToKRL.data.size();++i)
 //             if(intDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
 //                 toKRL.intData[i] = static_cast<fri_int32_t>(intDataToKRL.data[i]);
-//         doUpdate();
+//         setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 //     }
 //
 //     // Incoming ROS Float message
@@ -544,120 +562,102 @@ void KRLTool::updateHook()
 //         for(unsigned i=0;i<FRI_USER_SIZE && i<realDataToKRL.data.size();++i)
 //             if(realDataToKRL.data[i] != lwr::ROS_MASK_NO_UPDATE)
 //                 toKRL.realData[i] = static_cast<fri_float_t>(realDataToKRL.data[i]);
-//         doUpdate();
+//         setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 //     }
 
     // To KRL
-    if(do_update)
+    if(!has_cmd && getBit(toKRL.boolData,KRL_LOOP_REQUESTED))
     {
+        to_krl_bool_data = toKRL.boolData;
+        has_cmd = true;
+    }
 
-        if(getBit(fromKRL.boolData,KRL_LOOP_REQUESTED) && has_sent_cmd)
+
+    if(has_cmd)
+    {
+        if(getBit(fromKRL.boolData,KRL_LOOP_REQUESTED))
         {
-            noUpdate();
-            has_sent_cmd = false;
 
-            for(unsigned int i=0;i<FRI_USER_SIZE;++i)
+            bool ack_ptp = getBit(to_krl_bool_data,PTP_CMD) && ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE;
+            bool ack_lin = getBit(to_krl_bool_data,LIN_CMD) && lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE;
+
+            resetBoolToKRL();
+
+            port_toKRL.write(toKRL);
+
+            while(!hasKRLReset())
             {
-                // Reset bits if they have been acked .Special case STOP2
-                if(getBit(fromKRL.boolData,i) && i != STOP2 && i != SET_VEL)
-                    setBit(toKRL.boolData,i,false);
+                port_fromKRL.read(fromKRL);
+                usleep(250);
+                // log(Info) << "----- Waiting-----" << endlog();
             }
 
-            if(ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+            if(ack_ptp)
             {
+                // log(Info) << "----- PTP ACKED   -----" << endlog();
                 ptp_current_gh.setSucceeded(ptp_result);
             }
-            if(lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+            if(ack_lin)
             {
+                // log(Info) << "----- LIN ACKED   -----" << endlog();
                 lin_current_gh.setSucceeded(lin_result);
             }
-            // printBool();
+
+
+            to_krl_bool_data = 0;
+            has_cmd = false;
+
             // log(Info) << "----- ACKED   -----" << endlog();
-
         }
-        else if(getBit(fromKRL.boolData,KRL_LOOP_REQUESTED) && !has_sent_cmd)
-        {
-            // special case, bug or error, lets write 00
-            // setBit(toKRL.boolData,KRL_LOOP_REQUESTED,false);
-            // printAll();
-            // log(Error) << "getBit(fromKRL.boolData,KRL_LOOP_REQUESTED) && !has_sent_cmd THIS SHOULD NOT HAPPEND"<< endlog();
-        }
-        else
-        {
-            // std::vector<float> d_lin(3);
-            // std::vector<float> d_ptp(LBR_MNJ);
-            //
-            // for(int i=0;i<LBR_MNJ;i++)
-            //     if(toKRL.realData[A1+i] > startPTP[i])
-            //         d_ptp[i] = 100.0*(fromKRL.realData[AXIS_ACT_A1 + i]-startPTP[i])/(toKRL.realData[A1+i]-startPTP[i]);
-            //     else
-            //         d_ptp[i] = 100.0*(fromKRL.realData[AXIS_ACT_A1 + i]-toKRL.realData[A1+i])/(startPTP[i] - toKRL.realData[A1+i]);
-            //
-            // for(int i=0;i<3;i++)
-            //     if(toKRL.realData[X+i] > startLIN[i])
-            //         d_lin[i] = 100.0*(fromKRL.realData[POS_ACT_X+i] - startLIN[i])/(toKRL.realData[X+i]-startLIN[i]);
-            //     else
-            //         d_lin[i] = 100.0*(fromKRL.realData[POS_ACT_X+i] - toKRL.realData[X+i])/(startLIN[i]-toKRL.realData[X+i]);
-            //
-            // if(ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
-            // {
-            //     if(ptp_current_gh.getGoal()->ptp_input_type == JOINT)
-            //         ptp_feedback.percent_complete = *std::min_element(d_ptp.begin(),d_ptp.end());
-            //     else
-            //         ptp_feedback.percent_complete = *std::min_element(d_lin.begin(),d_lin.end());
-            //     ptp_current_gh.publishFeedback(ptp_feedback);
-            // }
-            // if(lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
-            // {
-            //     lin_feedback.percent_complete = *std::min_element(d_lin.begin(),d_lin.end());
-            //     lin_current_gh.publishFeedback(lin_feedback);
-            // }
-            // Request an update
-            setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
-            // printBool();
-            // cout <<"----- WRITING -----" << endl;
-            has_sent_cmd = true;
-        }
-
     }
     else
     {
-        for(unsigned int i=0;i<FRI_USER_SIZE;++i)
-        {
-            if(getBit(fromKRL.boolData,i) && i != STOP2 && i != SET_VEL)
-                setBit(toKRL.boolData,i,false);
-        }
+        resetBoolToKRL();
+        to_krl_bool_data = 0;
+        has_cmd = false;
     }
 
     if(getBit(fromKRL.boolData,SET_VEL))
     {
         setBit(toKRL.boolData,SET_VEL,false);
-        // printBool();
-        // log(Info) << "----- VEL ACKED -----" << endlog();
     }
 
     port_toKRL.write(toKRL);
 
     // Joint Impedance Commands
-    if(do_send_imp_cmd){
+    if(do_send_imp_cmd)
+    {
         port_JointImpedanceCommand.write(cmd);
         do_send_imp_cmd = false;
     }
 
-    port_fromKRL.read(fromKRL); // Should be after the first command !
+    if(first_loop)
+    {
+        port_fromKRL.read(fromKRL);
+        first_loop = false;
+    }
 
-//         /* To ROS for plotting */
-//     for(int i=0;i<FRI_USER_SIZE;++i)
-//         intDataFromKRL.data[i] = fromKRL.intData[i];
-//     for(int i=0;i<FRI_USER_SIZE;++i)
-//         realDataFromKRL.data[i] = fromKRL.realData[i];
-//     for(int i=0;i<FRI_USER_SIZE;++i)
-//         boolDataFromKRL.data[i] = getBit(fromKRL.boolData , i);
-//
-//     port_intDataFromKRL_ros.write(intDataFromKRL);
-//     port_realDataFromKRL_ros.write(realDataFromKRL);
-//     port_boolDataFromKRL_ros.write(boolDataFromKRL);
+        /* To ROS for plotting */
+    for(int i=0;i<FRI_USER_SIZE;++i)
+        intDataFromKRL.data[i] = fromKRL.intData[i];
+    for(int i=0;i<FRI_USER_SIZE;++i)
+        realDataFromKRL.data[i] = fromKRL.realData[i];
+    for(int i=0;i<FRI_USER_SIZE;++i)
+        boolDataFromKRL.data[i] = getBit(fromKRL.boolData , i);
 
+    port_intDataFromKRL_ros.write(intDataFromKRL);
+    port_realDataFromKRL_ros.write(realDataFromKRL);
+    port_boolDataFromKRL_ros.write(boolDataFromKRL);
+
+}
+
+void KRLTool::resetBoolToKRL()
+{
+    for(unsigned int i=0;i<FRI_USER_SIZE;++i)
+    {
+        if(i != STOP2 && i != SET_VEL)
+            setBit(toKRL.boolData,i,false);
+    }
 }
 
 void KRLTool::stopHook()

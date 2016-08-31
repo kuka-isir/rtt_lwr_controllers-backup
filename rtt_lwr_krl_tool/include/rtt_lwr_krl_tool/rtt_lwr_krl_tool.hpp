@@ -168,9 +168,8 @@ protected:
     void setStiffnessZero();
 
 private:
-    void doUpdate(){ do_update = true; }
-    void noUpdate(){ do_update = false;}
-    bool do_update;
+    void resetBoolToKRL();
+    bool hasKRLReset();
     lwr_fri::FriJointImpedance cmd;
     bool is_joint_torque_control_mode;
     bool do_send_imp_cmd;
