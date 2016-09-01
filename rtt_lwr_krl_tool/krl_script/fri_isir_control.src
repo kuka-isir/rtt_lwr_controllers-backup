@@ -1,8 +1,8 @@
 &ACCESS RVO
-&REL 57
+&REL 59
 &COMMENT ISIR-CNRS 2016
-&PARAM tool_number = 10
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
+&PARAM tool_number = 10
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM fri_rate_ms = 1.0
 &PARAM base_number = 0
@@ -18,14 +18,18 @@ DEF fri_isir_control( )
 GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
 INTERRUPT ON 3
 BAS (#INITMOV,0 )
-GLOBAL INTERRUPT DECL 4 WHEN $FRI_FRM_BOOL[8]==TRUE DO do_stop2()
+INTERRUPT DECL 4 WHEN $FRI_FRM_BOOL[8]==TRUE DO do_stop2()
 INTERRUPT ON 4
-GLOBAL INTERRUPT DECL 5 WHEN $FRI_FRM_BOOL[9]==TRUE DO set_vel()
+INTERRUPT DECL 5 WHEN $FRI_FRM_BOOL[9]==TRUE DO set_vel()
 INTERRUPT ON 5
 $TIMER_STOP[1] = TRUE
 $TIMER[1] = 0
-GLOBAL INTERRUPT DECL 6 WHEN $ON_PATH DO write_status()
-INTERRUPT ON 6
+INTERRUPT DECL 6 WHEN $ON_PATH DO write_status()
+INTERRUPT OFF 6
+INTERRUPT DECL 7 WHEN $fri_frm_bool[2] DO cancel_motion()
+INTERRUPT ON 7
+INTERRUPT DECL 8 WHEN $fri_frm_bool[2] == FALSE DO continue_motion()
+INTERRUPT OFF 8
 ;ENDFOLD (BASISTECH INI)
 ;FOLD USER INI
   ;FOLD Initialisation of shared array
@@ -88,83 +92,28 @@ $fri_to_rea[6] = $BASE.C
 repeat
 
   ;FOLD Wait for KRL_LOOP_REQUESTED
-  for i=1 to 16
-    if( (i <> 9) AND (i <> 8) ) then
-      $fri_to_bool[i]=false
-    endif
-  endfor
-  if($FriState==#CMD) then
-    $fri_to_int[1] = 2
-  endif
-  if($FriState==#MON) then
-    $fri_to_int[1] = 1
-  endif
-  wait for $fri_frm_bool[1]
-
-  use_rel = ($fri_frm_int[6] <> 0)
-  input_type = $fri_frm_int[7]
+  ; Reset Advance run pointer (dafuq ?!)
+  $ADVANCE = 3
+  INTERRUPT ON 4
+  INTERRUPT ON 5
+  INTERRUPT ON 7
+  
+  wait_for_loop_request()
 
   ;ENDFOLD
 
   ;FOLD New Control Mode requested
   if ( $fri_frm_bool[3] ) then
 
-    $MSG_T.KEY[] = "New Control Mode Requested          "
-    $MSG_T.VALID = TRUE
+    set_new_control_mode()
 
-    ; TODO : add a mode 40 Joint torque
-    if ( ($fri_frm_int[2] == 10) OR ($fri_frm_int[2] == 20) OR ($fri_frm_int[2] == 30) ) then
-
-      ret=fristop()
-      wait for ($fristate==#MON)
-
-      ;Set new Strategy
-      $STIFFNESS.STRATEGY = $fri_frm_int[2]
-      $STIFFNESS.COMMIT = TRUE
-
-      ;FOLD Screen output
-      IF ($stiffness.strategy == 10) THEN
-        $MSG_T.KEY[] = "Joint Position Control Mode"
-      ELSE
-        IF ($stiffness.strategy == 20) THEN
-          $MSG_T.KEY[] = "Cartesian Impedance Control Mode"
-        ELSE
-          IF (($stiffness.strategy == 30) AND (isZeroStiffness($STIFFNESS) == TRUE)) THEN
-            $MSG_T.KEY[] = "Joint Torque Control Mode"
-          ELSE
-            if ($stiffness.strategy == 30) then
-              $MSG_T.KEY[] = "Joint Impedance Control Mode"
-            else
-              $MSG_T.KEY[] = "ERROR: Wrong Control Strategy"
-            endif
-          ENDIF
-        ENDIF
-      ENDIF
-      $MSG_T.VALID = TRUE
-
-      ;ENDFOLD (Screen output)
-
-      PTP CLAMP_AXES($AXIS_ACT)
-      ret=fristart(1.0)
-      wait sec 0.2
-
-    endif
   endif
   ;ENDFOLD
 
   ;FOLD New tool requested
   if( $fri_frm_bool[4] ) then
 
-    $MSG_T.KEY[] = "New Tool Requested                  "
-    $MSG_T.VALID = TRUE
-
-    if( $fri_frm_int[3] >= 0 ) then
-      BAS(#TOOL,$fri_frm_int[3])
-      $STIFFNESS.TOOL = $TOOL
-      $STIFFNESS.BASE = $BASE
-      $STIFFNESS.COMMIT=TRUE
-      $fri_to_int[3] = $fri_frm_int[3]
-    endif
+    set_new_tool()
 
   endif
   ;ENDFOLD
@@ -172,24 +121,7 @@ repeat
   ;FOLD New base requested
   if( $fri_frm_bool[5] ) then
 
-    $MSG_T.KEY[] = "New Base Requested                  "
-    $MSG_T.VALID = TRUE
-
-    if( $fri_frm_int[4] >= 0 ) then
-      BAS(#BASE,$fri_frm_int[4])
-      $STIFFNESS.TOOL = $TOOL
-      $STIFFNESS.BASE = $BASE
-      $STIFFNESS.COMMIT=TRUE
-      $fri_to_int[4] = $fri_frm_int[4]
-      ;FOLD Publish BASE pose
-      $fri_to_rea[1] = $BASE.X
-      $fri_to_rea[2] = $BASE.Y
-      $fri_to_rea[3] = $BASE.Z
-      $fri_to_rea[4] = $BASE.A
-      $fri_to_rea[5] = $BASE.B
-      $fri_to_rea[6] = $BASE.C
-      ;ENDFOLD
-    endif
+    set_new_base()
 
   endif
   ;ENDFOLD
@@ -197,34 +129,7 @@ repeat
   ;FOLD Execute PTP Command
   if( $fri_frm_bool[6] ) then
 
-    if( use_rel ) then
-      $MSG_T.KEY[] = "New PTP_REL Command               "
-    else
-      $MSG_T.KEY[] = "New PTP Command                   "
-    endif
-
-    $MSG_T.VALID = TRUE
-
-    switch input_type
-    case 0
-
-      if(use_rel) then
-        PTP_REL BuildJntCmdFromFRI(true)
-      else
-        PTP BuildJntCmdFromFRI(false)
-      endif
-
-    case 1
-
-      CART_CMD = BuildCartCmdFromFRI()
-
-      if(use_rel) then
-        PTP_REL CART_CMD
-      else
-        PTP CART_CMD
-      endif
-
-    endswitch
+    execute_PTP()
 
   endif
   ;ENDFOLD
@@ -232,48 +137,12 @@ repeat
   ;FOLD Execute LIN Command
   if( $fri_frm_bool[7] ) then
 
-    if( use_rel ) then
-      $MSG_T.KEY[] = "New LIN_REL Command               "
-    else
-      $MSG_T.KEY[] = "New LIN Command                   "
-    endif
-
-    $MSG_T.VALID = TRUE
-
-    CART_CMD = BuildCartCmdFromFRI()
-
-    if(use_rel) then
-      LIN_REL CART_CMD
-    else
-      LIN CART_CMD
-    endif
+    execute_LIN()
 
   endif
   ;ENDFOLD
 
-  ;;FOLD Wait for Ack
-  ; This wait is necessary otherwise it will execute
-  ; the next set of instructions (!!)
-  WAIT SEC 0.0
-
-  ; Acknowledge all flags (set them to 1)
-  for i=1 to 16
-    if( (i <> 9) AND (i <> 8) ) then
-      $fri_to_bool[i]=$fri_frm_bool[i]
-    endif
-  endfor
-
-  ; Send response
-  WAIT SEC 0.0
-
-  ; Wait for confirmation (all flags back to 0)
-  for i=1 to 16
-    if( (i <> 9) AND (i <> 8) ) then
-      wait for ($fri_frm_bool[i] == false)
-    endif
-  endfor
-
-  ;;ENDFOLD
+  wait_for_acknowledgment()
 
 until ($fri_frm_int[1] == 3)
 
@@ -297,6 +166,134 @@ PTP { a1 0,a2 90,e1 0, a3 0,a4 0,a5 0,a6 0}
 
 END
 ;ENDFOLD
+
+def wait_for_loop_request()
+
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) AND (i <> 2) ) then
+      $fri_to_bool[i]=false
+    endif
+  endfor
+  if($FriState==#CMD) then
+    $fri_to_int[1] = 2
+  endif
+  if($FriState==#MON) then
+    $fri_to_int[1] = 1
+  endif
+  wait for $fri_frm_bool[1]
+
+  use_rel = ($fri_frm_int[6] <> 0)
+  input_type = $fri_frm_int[7]
+
+end
+
+def set_new_control_mode()
+
+  $MSG_T.KEY[] = "New Control Mode Requested          "
+  $MSG_T.VALID = TRUE
+
+  ; TODO : add a mode 40 Joint torque
+  if ( ($fri_frm_int[2] == 10) OR ($fri_frm_int[2] == 20) OR ($fri_frm_int[2] == 30) ) then
+
+    ret=fristop()
+    wait for ($fristate==#MON)
+
+    ;Set new Strategy
+    $STIFFNESS.STRATEGY = $fri_frm_int[2]
+    $STIFFNESS.COMMIT = TRUE
+
+    ;FOLD Screen output
+    IF ($stiffness.strategy == 10) THEN
+      $MSG_T.KEY[] = "Joint Position Control Mode"
+    ELSE
+      IF ($stiffness.strategy == 20) THEN
+        $MSG_T.KEY[] = "Cartesian Impedance Control Mode"
+      ELSE
+        IF (($stiffness.strategy == 30) AND (isZeroStiffness($STIFFNESS) == TRUE)) THEN
+          $MSG_T.KEY[] = "Joint Torque Control Mode"
+        ELSE
+          if ($stiffness.strategy == 30) then
+            $MSG_T.KEY[] = "Joint Impedance Control Mode"
+          else
+            $MSG_T.KEY[] = "ERROR: Wrong Control Strategy"
+          endif
+        ENDIF
+      ENDIF
+    ENDIF
+    $MSG_T.VALID = TRUE
+
+    ;ENDFOLD (Screen output)
+
+    PTP CLAMP_AXES($AXIS_ACT)
+    ret=fristart(1.0)
+    wait sec 0.2
+
+  endif
+
+end
+
+def set_new_base()
+
+  $MSG_T.KEY[] = "New Base Requested                  "
+  $MSG_T.VALID = TRUE
+
+  if( $fri_frm_int[4] >= 0 ) then
+    BAS(#BASE,$fri_frm_int[4])
+    $STIFFNESS.TOOL = $TOOL
+    $STIFFNESS.BASE = $BASE
+    $STIFFNESS.COMMIT=TRUE
+    $fri_to_int[4] = $fri_frm_int[4]
+    ;FOLD Publish BASE pose
+    $fri_to_rea[1] = $BASE.X
+    $fri_to_rea[2] = $BASE.Y
+    $fri_to_rea[3] = $BASE.Z
+    $fri_to_rea[4] = $BASE.A
+    $fri_to_rea[5] = $BASE.B
+    $fri_to_rea[6] = $BASE.C
+    ;ENDFOLD
+  endif
+
+end
+
+def set_new_tool()
+
+  $MSG_T.KEY[] = "New Tool Requested                  "
+  $MSG_T.VALID = TRUE
+
+  if( $fri_frm_int[3] >= 0 ) then
+    BAS(#TOOL,$fri_frm_int[3])
+    $STIFFNESS.TOOL = $TOOL
+    $STIFFNESS.BASE = $BASE
+    $STIFFNESS.COMMIT=TRUE
+    $fri_to_int[3] = $fri_frm_int[3]
+  endif
+
+end
+
+def wait_for_acknowledgment()
+  ; This wait is necessary otherwise it will execute
+  ; the next set of instructions (!!)
+  WAIT SEC 0
+
+  ; Acknowledge all flags (set them to 1)
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) AND (i <> 2) ) then
+      $fri_to_bool[i]=$fri_frm_bool[i]
+    endif
+  endfor
+
+  ; Send response
+  WAIT SEC 0
+
+  ; Wait for confirmation (all flags back to 0)
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) AND (i <> 2) ) then
+      wait for ($fri_frm_bool[i] == false)
+    endif
+  endfor
+
+  WAIT SEC 0
+end
 
 DEFFCT BOOL isZeroStiffness(s:IN)
   DECL STIFFNESS s
@@ -441,6 +438,87 @@ DEFFCT REAL CALC_COMPL(start_v:in,end_v:in,current_v:in)
 
   return (current_v - start_v ) / (end_v - start_v)
 ENDFCT
+
+def execute_PTP()
+
+  if( use_rel ) then
+    $MSG_T.KEY[] = "New PTP_REL Command               "
+  else
+    $MSG_T.KEY[] = "New PTP Command                   "
+  endif
+
+  $MSG_T.VALID = TRUE
+
+  switch input_type
+  case 0
+
+    if(use_rel) then
+      PTP_REL BuildJntCmdFromFRI(true)
+      $ADVANCE = 0
+    else
+      PTP BuildJntCmdFromFRI(false)
+      $ADVANCE = 0
+    endif
+
+  case 1
+
+    CART_CMD = BuildCartCmdFromFRI()
+
+    if(use_rel) then
+      PTP_REL CART_CMD
+      $ADVANCE = 0
+    else
+      PTP CART_CMD
+      $ADVANCE = 0
+    endif
+
+  endswitch
+
+end
+
+def execute_LIN()
+  if( use_rel ) then
+    $MSG_T.KEY[] = "New LIN_REL Command               "
+  else
+    $MSG_T.KEY[] = "New LIN Command                   "
+  endif
+
+  $MSG_T.VALID = TRUE
+
+  CART_CMD = BuildCartCmdFromFRI()
+
+  if(use_rel) then
+    LIN_REL CART_CMD
+    $ADVANCE = 0
+  else
+    LIN CART_CMD
+    $ADVANCE = 0
+  endif
+end
+
+
+def continue_motion()
+
+  $MSG_T.KEY[] = "Continue Motion                  "
+  $MSG_T.VALID = true
+  continue
+  $fri_to_bool[2] = false
+  INTERRUPT OFF 8
+
+end
+
+def cancel_motion()
+
+  brake
+  $MSG_T.KEY[] = "Cancelling Motion                  "
+  $MSG_T.VALID = true
+  INTERRUPT ON 8
+  $fri_to_bool[2] = true
+  wait sec 0
+  resume
+
+end
+
 
 def write_status()
   ;$fri_to_rea[1] = $BASE.X

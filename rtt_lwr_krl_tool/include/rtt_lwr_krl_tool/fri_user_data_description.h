@@ -6,7 +6,7 @@ namespace krl{
 enum FRI_BOOL_DATA_DESCRIPTION
 {
     KRL_LOOP_REQUESTED = 0,
-    EMPTY_BOOL,
+    CANCEL_MOTION,
     SET_CONTROL_MODE,
     SET_TOOL,
     SET_BASE,
