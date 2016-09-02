@@ -130,6 +130,8 @@ private: void PointToPoint(
 //     void LIN(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
 private: void Linear(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad,bool use_lin_rel);
 protected:
+    void addNoAckNeededVar(int special_case);
+    bool isNoAckNeededVar(int test_case);
     void resetData();
     void cancelMotion();
     void setTool(int tool_number);
@@ -176,6 +178,7 @@ private:
     bool is_joint_torque_control_mode;
     bool do_send_imp_cmd;
     bool is_initialized;
+    std::vector<int> bypass_ack_idx;
 };
 }
 ORO_CREATE_COMPONENT(lwr::KRLTool)

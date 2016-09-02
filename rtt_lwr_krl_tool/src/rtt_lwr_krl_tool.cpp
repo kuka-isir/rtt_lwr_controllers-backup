@@ -67,6 +67,11 @@ is_joint_torque_control_mode(false)
         fromKRL.intData[i] = toKRL.intData[i] =  0;
         fromKRL.realData[i] = toKRL.realData[i] = 0.0;
     }
+
+    addNoAckNeededVar(STOP2);
+    addNoAckNeededVar(SET_VEL);
+    addNoAckNeededVar(CANCEL_MOTION);
+
     fromKRL.boolData = 0;
     toKRL.boolData = 0;
 
@@ -530,7 +535,7 @@ bool KRLTool::hasKRLReset()
 {
     for(int i=0;i<FRI_USER_SIZE;i++)
     {
-        if(i==SET_VEL || i==STOP2 || i==CANCEL_MOTION)
+        if(isNoAckNeededVar(i))
             continue;
         if(getBit(fromKRL.boolData,i))
             return false;
@@ -671,12 +676,25 @@ void KRLTool::updateHook()
 
 }
 
+void KRLTool::addNoAckNeededVar(int special_case)
+{
+    bypass_ack_idx.push_back(special_case);
+}
+
+bool KRLTool::isNoAckNeededVar(int test_case)
+{
+    for(int i=0;i<bypass_ack_idx.size();++i)
+        if(bypass_ack_idx[i] == test_case)
+            return true;
+    return false;
+}
+
 void KRLTool::resetBoolToKRL()
 {
     for(unsigned int i=0;i<FRI_USER_SIZE;++i)
     {
         // Special cases do not need to be reset
-        if(i != STOP2 && i != SET_VEL && i!=CANCEL_MOTION)
+        if(!isNoAckNeededVar(i))
             setBit(toKRL.boolData,i,false);
     }
 }

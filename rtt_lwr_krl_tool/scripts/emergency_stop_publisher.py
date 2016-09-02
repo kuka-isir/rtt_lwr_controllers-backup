@@ -40,6 +40,10 @@ def distanceCB(msg):
         unset_stop2_srv()
 
 
+rospy.wait_for_service("/lwr_krl_tool/set_max_vel_percent")
+rospy.wait_for_service("/lwr_krl_tool/send_stop2")
+rospy.wait_for_service("/lwr_krl_tool/unset_stop2")
+
 dist_sub = rospy.Subscriber("/sick_proc/min_dist_to_laser",Float32,callback=distanceCB,tcp_nodelay=True,queue_size=10)
 vel_srv = rospy.ServiceProxy("/lwr_krl_tool/set_max_vel_percent",SetMaxVelPercent)
 stop2_srv = rospy.ServiceProxy("/lwr_krl_tool/send_stop2", Empty)

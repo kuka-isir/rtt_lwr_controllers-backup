@@ -21,7 +21,7 @@ enum FRI_BOOL_DATA_DESCRIPTION
     MASK_4,
     MASK_5,
     MASK_6
-};
+}FriBoolDataToKRL;
 
 enum FRI_INT_DATA_DESCRIPTION
 {
