@@ -60,6 +60,8 @@ is_joint_torque_control_mode(false)
     this->addOperation("setBase_srv",&KRLTool::setBase_srv,this);
     this->addOperation("setToolBase_srv",&KRLTool::setToolBase_srv,this);
 
+    this->addOperation("resetData",&KRLTool::resetData,this);
+
     for(unsigned int i=0;i<FRI_USER_SIZE;i++)
     {
         fromKRL.intData[i] = toKRL.intData[i] =  0;
@@ -69,6 +71,16 @@ is_joint_torque_control_mode(false)
     toKRL.boolData = 0;
 
 }
+
+void KRLTool::resetData()
+{
+    toKRL.boolData = 0;
+    for (size_t i = 0; i < FRI_USER_SIZE; i++) {
+        toKRL.intData[i] = toKRL.realData[i] = 0;
+    }
+    port_toKRL.write(toKRL);
+}
+
 // Called by ptp_action_server_ when a new goal is received
 void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
 {
@@ -188,13 +200,11 @@ void KRLTool::Linear(
 void KRLTool::sendSTOP2()
 {
     setBit(toKRL.boolData,STOP2,true);
-    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 void KRLTool::unsetSTOP2()
 {
     setBit(toKRL.boolData,STOP2,false);
-    setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
 bool KRLTool::sendSTOP2_srv(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& resp)
@@ -520,7 +530,7 @@ bool KRLTool::hasKRLReset()
 {
     for(int i=0;i<FRI_USER_SIZE;i++)
     {
-        if(i==SET_VEL || i==STOP2)
+        if(i==SET_VEL || i==STOP2 || i==CANCEL_MOTION)
             continue;
         if(getBit(fromKRL.boolData,i))
             return false;
@@ -565,6 +575,7 @@ void KRLTool::updateHook()
     {
         to_krl_bool_data = toKRL.boolData;
         has_cmd = true;
+        printAll();
     }
 
 
@@ -630,6 +641,7 @@ void KRLTool::updateHook()
         setBit(toKRL.boolData,CANCEL_MOTION,false);
     }
 
+    // Writing
     port_toKRL.write(toKRL);
 
     // Joint Impedance Commands

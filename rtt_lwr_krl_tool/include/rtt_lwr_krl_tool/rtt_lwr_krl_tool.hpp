@@ -130,6 +130,7 @@ private: void PointToPoint(
 //     void LIN(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
 private: void Linear(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad,bool use_lin_rel);
 protected:
+    void resetData();
     void cancelMotion();
     void setTool(int tool_number);
     void setBase(int base_number);
