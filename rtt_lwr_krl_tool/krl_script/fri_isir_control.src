@@ -1,5 +1,5 @@
-&ACCESS RVO
-&REL 59
+&ACCESS RVP
+&REL 61
 &COMMENT ISIR-CNRS 2016
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM tool_number = 10
@@ -12,7 +12,7 @@ DEF fri_isir_control( )
 ; Copyright ISIR-CNRS 2016
 ; Author: Antoine Hoarau
 ;ENDFOLD (ProgramInfo)
- 
+
 ;FOLD INI
 ;FOLD BASISTECH INI
 GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
@@ -97,7 +97,7 @@ repeat
   INTERRUPT ON 4
   INTERRUPT ON 5
   INTERRUPT ON 7
-  
+
   wait_for_loop_request()
 
   ;ENDFOLD
@@ -142,7 +142,28 @@ repeat
   endif
   ;ENDFOLD
 
-  wait_for_acknowledgment()
+  ; This wait is necessary otherwise it will execute
+  ; the next set of instructions (!!)
+  WAIT SEC 0
+
+  ; Acknowledge all flags (set them to 1)
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) AND (i <> 2) ) then
+      $fri_to_bool[i]=$fri_frm_bool[i]
+    endif
+  endfor
+
+  ; Send response
+  WAIT SEC 0
+
+  ; Wait for confirmation (all flags back to 0)
+  for i=1 to 16
+    if( (i <> 9) AND (i <> 8) AND (i <> 2) ) then
+      wait for ($fri_frm_bool[i] == false)
+    endif
+  endfor
+
+  WAIT SEC 0
 
 until ($fri_frm_int[1] == 3)
 
@@ -180,6 +201,8 @@ def wait_for_loop_request()
   if($FriState==#MON) then
     $fri_to_int[1] = 1
   endif
+
+  ;-- Waiting for PC commands --;
   wait for $fri_frm_bool[1]
 
   use_rel = ($fri_frm_int[6] <> 0)
@@ -307,6 +330,8 @@ DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
   DECL E6AXIS JOINT_OUT
   BOOL use_relative
 
+  BAS(#PTP_PARAMS,$fri_frm_rea[7])
+
   if(use_relative) then
     JOINT_OUT = {A1 0.0, A2 0.0, E1 0.0, A3 0.0, A4 0.0, A5 0.0, A6 0.0}
   else
@@ -344,34 +369,39 @@ DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
   return CLAMP_AXES(JOINT_OUT)
 ENDFCT
 
-DEFFCT POS BuildCartCmdFromFRI()
+DEFFCT POS BuildCartCmdFromFRI(use_relative:IN)
   DECL POS CART_OUT
-  ;DECL INT STRING_OFFSET
-  ;DECL STATE_T STATE
+  BOOL use_relative
 
-  CART_OUT = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
+  BAS(#CP_PARAMS,$fri_frm_rea[7])
 
-  if( $fri_frm_bool[10] OR use_rel) then
+  if(use_relative) then
+    CART_OUT = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
+  else
+    CART_OUT = $POS_ACT
+  endif
+
+  if( $fri_frm_bool[10] ) then
     CART_OUT.X = $fri_frm_rea[1]
   endif
 
-  if( $fri_frm_bool[11] OR use_rel ) then
+  if( $fri_frm_bool[11] ) then
     CART_OUT.Y = $fri_frm_rea[2]
   endif
 
-  if( $fri_frm_bool[12] OR use_rel ) then
+  if( $fri_frm_bool[12] ) then
     CART_OUT.Z = $fri_frm_rea[3]
   endif
 
-  if( $fri_frm_bool[13] OR use_rel ) then
+  if( $fri_frm_bool[13] ) then
     CART_OUT.A = $fri_frm_rea[4]
   endif
 
-  if( $fri_frm_bool[14] OR use_rel ) then
+  if( $fri_frm_bool[14] ) then
     CART_OUT.B = $fri_frm_rea[5]
   endif
 
-  if( $fri_frm_bool[15] OR use_rel ) then
+  if( $fri_frm_bool[15] ) then
     CART_OUT.C = $fri_frm_rea[6]
   endif
 
@@ -458,17 +488,16 @@ def execute_PTP()
     else
       PTP BuildJntCmdFromFRI(false)
       $ADVANCE = 0
+
     endif
 
   case 1
 
-    CART_CMD = BuildCartCmdFromFRI()
-
     if(use_rel) then
-      PTP_REL CART_CMD
+      PTP_REL BuildCartCmdFromFRI(true)
       $ADVANCE = 0
     else
-      PTP CART_CMD
+      PTP BuildCartCmdFromFRI(false)
       $ADVANCE = 0
     endif
 
@@ -485,13 +514,11 @@ def execute_LIN()
 
   $MSG_T.VALID = TRUE
 
-  CART_CMD = BuildCartCmdFromFRI()
-
   if(use_rel) then
-    LIN_REL CART_CMD
+    LIN_REL BuildCartCmdFromFRI(true)
     $ADVANCE = 0
   else
-    LIN CART_CMD
+    LIN BuildCartCmdFromFRI(false)
     $ADVANCE = 0
   endif
 end
