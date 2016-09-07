@@ -117,10 +117,12 @@ private: void PointToPoint(
     const std::vector<double>& mask,
     const geometry_msgs::Vector3& XYZ,
     const geometry_msgs::Vector3& RPY,
+    const geometry_msgs::Vector3& XYZ_mask,
+    const geometry_msgs::Vector3& RPY_mask,
     bool use_radians,
     int ptp_input_type,
-    bool use_ptp_rel,
-    double vel_ptp);
+    bool use_rel,
+    double vel_percent);
 
 // protected:
 //     void PTP(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians, double vel_ptp);
@@ -128,7 +130,14 @@ private: void PointToPoint(
 //     void PTP_POS(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad, bool use_ptp_rel,double vel_ptp);
 //     void LIN_REL(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
 //     void LIN(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
-private: void Linear(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad,bool use_lin_rel);
+private: void Linear(
+    const geometry_msgs::Vector3& XYZ_meters,
+    const geometry_msgs::Vector3& RPY_rad,
+    const geometry_msgs::Vector3& XYZ_mask,
+    const geometry_msgs::Vector3& RPY_mask,
+    bool use_rel,
+    double vel_percent);
+
 protected:
     void addNoAckNeededVar(int special_case);
     bool isNoAckNeededVar(int test_case);

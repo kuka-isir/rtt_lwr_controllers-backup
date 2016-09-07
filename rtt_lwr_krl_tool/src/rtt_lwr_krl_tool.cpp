@@ -118,14 +118,13 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
         ptp_mask,
         gh.getGoal()->XYZ,
         gh.getGoal()->RPY,
+        gh.getGoal()->XYZ_mask,
+        gh.getGoal()->RPY_mask,
         gh.getGoal()->use_radians,
         gh.getGoal()->ptp_input_type,
         gh.getGoal()->use_relative,
         gh.getGoal()->vel_percent
     );
-
-    // for(int i = 0;i<LBR_MNJ;i++)
-    //     startPTP[i] = fromKRL.realData[AXIS_ACT_A1 + i];
 
     gh.setAccepted();
     ptp_current_gh = gh;
@@ -151,10 +150,14 @@ void KRLTool::LINgoalCallback(LINGoalHandle gh)
 
     log(Warning) << "Sending new LIN"<<(gh.getGoal()->use_relative ? "_REL":"")<<" Command "<<endlog();
 
-    // for(int i = 0;i<3;i++)
-    //     startLIN[i] = fromKRL.realData[POS_ACT_X + i];
-
-    Linear(gh.getGoal()->XYZ,gh.getGoal()->RPY,gh.getGoal()->use_relative);
+    this->Linear(
+        gh.getGoal()->XYZ,
+        gh.getGoal()->RPY,
+        gh.getGoal()->XYZ_mask,
+        gh.getGoal()->RPY_mask,
+        gh.getGoal()->use_relative,
+        gh.getGoal()->vel_percent
+    );
     gh.setAccepted();
     lin_current_gh = gh;
 }
@@ -170,7 +173,10 @@ void KRLTool::LINcancelCallback(LINGoalHandle gh)
 void KRLTool::Linear(
     const geometry_msgs::Vector3& XYZ_meters,
     const geometry_msgs::Vector3& RPY_rad,
-    bool use_lin_rel)
+    const geometry_msgs::Vector3& XYZ_mask,
+    const geometry_msgs::Vector3& RPY_mask,
+    bool use_rel,
+    double vel_percent)
 {
     bool use_radians = true;
 
@@ -190,15 +196,16 @@ void KRLTool::Linear(
     toKRL.realData[B] = RPY_rad.y * conv;
     toKRL.realData[C] = RPY_rad.x * conv;
 
-    setBit(toKRL.boolData,MASK_0,true);
-    setBit(toKRL.boolData,MASK_1,true);
-    setBit(toKRL.boolData,MASK_2,true);
-    setBit(toKRL.boolData,MASK_3,true);
-    setBit(toKRL.boolData,MASK_4,true);
-    setBit(toKRL.boolData,MASK_5,true);
+    setBit(toKRL.boolData,MASK_0,XYZ_mask.x);
+    setBit(toKRL.boolData,MASK_1,XYZ_mask.y);
+    setBit(toKRL.boolData,MASK_2,XYZ_mask.z);
+    setBit(toKRL.boolData,MASK_3,RPY_mask.z); // A
+    setBit(toKRL.boolData,MASK_4,RPY_mask.y); // B
+    setBit(toKRL.boolData,MASK_5,RPY_mask.x); // C
 
     toKRL.intData[CMD_INPUT_TYPE] = CARTESIAN;
-    toKRL.intData[USE_RELATIVE] = use_lin_rel;
+    toKRL.intData[USE_RELATIVE] = use_rel;
+    toKRL.realData[CMD_VEL_PERCENT] = vel_percent;
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
@@ -414,10 +421,12 @@ void KRLTool::PointToPoint(
     const std::vector<double>& mask,
     const geometry_msgs::Vector3& XYZ,
     const geometry_msgs::Vector3& RPY,
+    const geometry_msgs::Vector3& XYZ_mask,
+    const geometry_msgs::Vector3& RPY_mask,
     bool use_radians,
     int ptp_input_type,
-    bool use_ptp_rel,
-    double vel_ptp)
+    bool use_rel,
+    double vel_percent)
 {
     if(ptp_input_type == JOINT && ptp.size() != LBR_MNJ)
     {
@@ -440,7 +449,7 @@ void KRLTool::PointToPoint(
     {
         case JOINT:
             toKRL.realData[A1] = conv * ptp[0];
-            toKRL.realData[A2] = (use_ptp_rel ? 0.0:90.0) + conv * ptp[1];
+            toKRL.realData[A2] = (use_rel ? 0.0:90.0) + conv * ptp[1];
             toKRL.realData[E1] = conv * ptp[2];
             toKRL.realData[A3] = conv * ptp[3];
             toKRL.realData[A4] = conv * ptp[4];
@@ -464,19 +473,20 @@ void KRLTool::PointToPoint(
             toKRL.realData[B] = RPY.y * conv;
             toKRL.realData[C] = RPY.x * conv;
 
-            setBit(toKRL.boolData,MASK_0,true);
-            setBit(toKRL.boolData,MASK_1,true);
-            setBit(toKRL.boolData,MASK_2,true);
-            setBit(toKRL.boolData,MASK_3,true);
-            setBit(toKRL.boolData,MASK_4,true);
-            setBit(toKRL.boolData,MASK_5,true);
+            setBit(toKRL.boolData,MASK_0,XYZ_mask.x);
+            setBit(toKRL.boolData,MASK_1,XYZ_mask.y);
+            setBit(toKRL.boolData,MASK_2,XYZ_mask.z);
+            setBit(toKRL.boolData,MASK_3,RPY_mask.z); // A
+            setBit(toKRL.boolData,MASK_4,RPY_mask.y); // B
+            setBit(toKRL.boolData,MASK_5,RPY_mask.x); // C
         break;
     }
 
     toKRL.intData[CMD_INPUT_TYPE] = ptp_input_type;
     setBit(toKRL.boolData,PTP_CMD,true);
     setBit(toKRL.boolData,LIN_CMD,false);
-    toKRL.intData[USE_RELATIVE] = use_ptp_rel;
+    toKRL.intData[USE_RELATIVE] = use_rel;
+    toKRL.realData[CMD_VEL_PERCENT] = vel_percent;
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
@@ -496,7 +506,7 @@ void KRLTool::setVELPercent(float vel_percent)
 {
   if( 0 <= vel_percent && vel_percent <= 100)
   {
-    toKRL.realData[VEL_PERCENT] = vel_percent;
+    toKRL.realData[OV_VEL_PERCENT] = vel_percent;
     setBit(toKRL.boolData,SET_VEL,true);
   }else{
     log(Error) << "Max velocity must be between [0:100]"<< endlog();
@@ -580,7 +590,7 @@ void KRLTool::updateHook()
     {
         to_krl_bool_data = toKRL.boolData;
         has_cmd = true;
-        printAll();
+        //printAll();
     }
 
 

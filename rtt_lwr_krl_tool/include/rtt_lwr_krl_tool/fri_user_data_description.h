@@ -55,9 +55,9 @@ enum FRI_REAL_DATA_DESCRIPTION
     A, // rotation around Z in degrees
     B, // rotation around Y in degrees
     C, // rotation around X in degrees
-    REAL_EMPTY6,
+    CMD_VEL_PERCENT, // Vel for PTP, lin etc.
     REAL_EMPTY7,
-    VEL_PERCENT, // Max velocity in % (upper right on teach)
+    OV_VEL_PERCENT, // Overrride Max velocity in % (upper right on teach)
     A1, // Joint 0 in degrees
     A2, // Joint 1 in degrees
     E1, // Joint 2 in degrees
