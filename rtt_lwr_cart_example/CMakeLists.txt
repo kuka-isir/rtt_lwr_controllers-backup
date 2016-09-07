@@ -17,7 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
     cmake_modules
 #    conman
     rtt_ros_kdl_tools
-    interactive_markers
+    #interactive_markers
     roscpp
     visualization_msgs
     tf
