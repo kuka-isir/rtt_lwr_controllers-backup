@@ -205,7 +205,16 @@ void KRLTool::Linear(
 
     toKRL.intData[CMD_INPUT_TYPE] = CARTESIAN;
     toKRL.intData[USE_RELATIVE] = use_rel;
-    toKRL.realData[CMD_VEL_PERCENT] = vel_percent;
+
+    if( 0 <= vel_percent && vel_percent <= 100.0)
+    {
+        toKRL.realData[CMD_VEL_PERCENT] = vel_percent;
+    }
+    else
+    {
+        toKRL.realData[CMD_VEL_PERCENT] = 100.0;
+        log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<")"<<endlog();
+    }
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
@@ -486,7 +495,16 @@ void KRLTool::PointToPoint(
     setBit(toKRL.boolData,PTP_CMD,true);
     setBit(toKRL.boolData,LIN_CMD,false);
     toKRL.intData[USE_RELATIVE] = use_rel;
-    toKRL.realData[CMD_VEL_PERCENT] = vel_percent;
+
+    if( 0 <= vel_percent && vel_percent <= 100.0)
+    {
+        toKRL.realData[CMD_VEL_PERCENT] = vel_percent;
+    }
+    else
+    {
+        toKRL.realData[CMD_VEL_PERCENT] = 100.0;
+        log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<")"<<endlog();
+    }
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
