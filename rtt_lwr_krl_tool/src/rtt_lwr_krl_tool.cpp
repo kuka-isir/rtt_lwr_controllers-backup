@@ -47,6 +47,7 @@ is_joint_torque_control_mode(false)
     this->addOperation("printInt",&KRLTool::printInt,this);
     this->addOperation("printReal",&KRLTool::printReal,this);
     this->addOperation("printAll",&KRLTool::printAll,this);
+    this->addOperation("cancelGoals",&KRLTool::cancelGoals,this);
     this->addOperation("cancelMotion",&KRLTool::cancelMotion,this);
     this->addOperation("setTool",&KRLTool::setTool,this);
     this->addOperation("setBase",&KRLTool::setBase,this);
@@ -134,7 +135,22 @@ void KRLTool::PTPcancelCallback(PTPGoalHandle gh)
 {
     log(Warning) << "You asked to cancel the current PTP goal"<<endlog();
     if(ptp_current_gh == gh && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE) {
-      cancelMotion();
+      //cancelMotion();
+      cancelGoals();
+    }
+}
+
+void KRLTool::cancelGoals()
+{
+    if( ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+    {
+        log(Warning) << "Cancelling PTP goal"<<endlog();
+        ptp_current_gh.setCanceled();
+    }
+    if( lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+    {
+        log(Warning) << "Cancelling LIN goal"<<endlog();
+        lin_current_gh.setCanceled();
     }
 }
 
@@ -166,7 +182,8 @@ void KRLTool::LINcancelCallback(LINGoalHandle gh)
 {
     log(Warning) << "You asked to cancel the current LIN goal"<<endlog();
     if(lin_current_gh == gh && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE) {
-      cancelMotion();
+    //   cancelMotion();
+        cancelGoals();
     }
 }
 

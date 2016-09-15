@@ -45,6 +45,7 @@
       <plugin_depend>rtt_roscomm</plugin_depend>
       <plugin_depend>rtt_rospack</plugin_depend>
       <plugin_depend>rtt_actionlib</plugin_depend>
+      <plugin_depend>rtt_std_srvs</plugin_depend>
     </rtt_ros>
   </export>
 </package>

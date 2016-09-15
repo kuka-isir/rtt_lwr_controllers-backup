@@ -143,6 +143,7 @@ protected:
     bool isNoAckNeededVar(int test_case);
     void resetData();
     void cancelMotion();
+    void cancelGoals();
     void setTool(int tool_number);
     void setBase(int base_number);
     void sendSTOP2();
