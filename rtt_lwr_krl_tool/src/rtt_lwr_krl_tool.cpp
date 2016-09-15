@@ -193,7 +193,8 @@ void KRLTool::Linear(
     const geometry_msgs::Vector3& XYZ_mask,
     const geometry_msgs::Vector3& RPY_mask,
     bool use_rel,
-    double vel_percent)
+    double vel_percent,
+    bool in_tool_frame)
 {
     bool use_radians = true;
 
@@ -220,8 +221,14 @@ void KRLTool::Linear(
     setBit(toKRL.boolData,MASK_4,RPY_mask.y); // B
     setBit(toKRL.boolData,MASK_5,RPY_mask.x); // C
 
-    toKRL.intData[CMD_INPUT_TYPE] = CARTESIAN;
+    toKRL.intData[CMD_INPUT_TYPE] = (in_tool_frame ? CARTESIAN_IN_TOOL:CARTESIAN_IN_BASE);
     toKRL.intData[USE_RELATIVE] = use_rel;
+
+    if(in_tool_frame && !use_rel)
+    {
+        log(Error) << "Moving in tool frame only works with Relative movements !" << endlog();
+        return;
+    }
 
     if( 0 <= vel_percent && vel_percent <= 100.0)
     {
@@ -490,7 +497,7 @@ void KRLTool::PointToPoint(
             setBit(toKRL.boolData,MASK_6,mask[6]);
         break;
 
-        case CARTESIAN:
+        case CARTESIAN_IN_BASE:
             toKRL.realData[X] = XYZ.x * 1000.0;
             toKRL.realData[Y] = XYZ.y * 1000.0;
             toKRL.realData[Z] = XYZ.z * 1000.0;
@@ -507,7 +514,11 @@ void KRLTool::PointToPoint(
             setBit(toKRL.boolData,MASK_5,RPY_mask.x); // C
         break;
     }
-
+    if(ptp_input_type == CARTESIAN_IN_TOOL)
+    {
+        log(Error) << "Tool frame is only support for LIN_REL motions" << endlog();
+        return;
+    }
     toKRL.intData[CMD_INPUT_TYPE] = ptp_input_type;
     setBit(toKRL.boolData,PTP_CMD,true);
     setBit(toKRL.boolData,LIN_CMD,false);

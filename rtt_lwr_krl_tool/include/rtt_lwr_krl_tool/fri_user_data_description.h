@@ -31,13 +31,14 @@ enum FRI_INT_DATA_DESCRIPTION
     BASE,
     FRI_CMD,
     USE_RELATIVE, // 0 is false, 1 is true
-    CMD_INPUT_TYPE // 0 is Joint, 1 is Cartesian
+    CMD_INPUT_TYPE // 0 is Joint, 1 is Cartesian in base Frame, 2 is Cartesian in Tool Frame
 };
 
 enum COMMAND_INPUT_TYPE
 {
     JOINT = 0,
-    CARTESIAN
+    CARTESIAN_IN_BASE,
+    CARTESIAN_IN_TOOL
 };
 
 enum FRI_COMMAND

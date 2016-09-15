@@ -136,7 +136,8 @@ private: void Linear(
     const geometry_msgs::Vector3& XYZ_mask,
     const geometry_msgs::Vector3& RPY_mask,
     bool use_rel,
-    double vel_percent);
+    double vel_percent,
+    bool in_tool_frame = false);
 
 protected:
     void addNoAckNeededVar(int special_case);
