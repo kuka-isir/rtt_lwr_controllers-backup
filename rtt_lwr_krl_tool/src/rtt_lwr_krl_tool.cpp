@@ -691,7 +691,7 @@ void KRLTool::updateHook()
 
     if(getBit(fromKRL.boolData,CANCEL_MOTION))
     {
-        cancelGoals();
+        //cancelGoals();
         setBit(toKRL.boolData,CANCEL_MOTION,false);
     }
 
