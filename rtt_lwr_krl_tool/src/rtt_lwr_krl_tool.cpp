@@ -164,7 +164,7 @@ void KRLTool::LINgoalCallback(LINGoalHandle gh)
       return;
     }
 
-    log(Warning) << "Sending new LIN"<<(gh.getGoal()->use_relative ? "_REL":"")<<" Command "<<endlog();
+    log(Warning) << "Sending new LIN"<<(gh.getGoal()->use_relative ? "_REL":"")<<" Command in "<<(gh.getGoal()->in_tool_frame ? "tool":"base")<<" frame"<<endlog();
 
     this->Linear(
         gh.getGoal()->XYZ,
@@ -172,7 +172,8 @@ void KRLTool::LINgoalCallback(LINGoalHandle gh)
         gh.getGoal()->XYZ_mask,
         gh.getGoal()->RPY_mask,
         gh.getGoal()->use_relative,
-        gh.getGoal()->vel_percent
+        gh.getGoal()->vel_percent,
+        gh.getGoal()->in_tool_frame
     );
     gh.setAccepted();
     lin_current_gh = gh;
