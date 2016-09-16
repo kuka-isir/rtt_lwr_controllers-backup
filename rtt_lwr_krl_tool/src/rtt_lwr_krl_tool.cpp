@@ -134,20 +134,17 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
 void KRLTool::PTPcancelCallback(PTPGoalHandle gh)
 {
     log(Warning) << "You asked to cancel the current PTP goal"<<endlog();
-    if(ptp_current_gh == gh && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE) {
-      //cancelMotion();
-      cancelGoals();
-    }
+    cancelMotion();
 }
 
 void KRLTool::cancelGoals()
 {
-    if( ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+    if(ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
     {
         log(Warning) << "Cancelling PTP goal"<<endlog();
         ptp_current_gh.setCanceled();
     }
-    if( lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+    if(lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
     {
         log(Warning) << "Cancelling LIN goal"<<endlog();
         lin_current_gh.setCanceled();
@@ -156,8 +153,8 @@ void KRLTool::cancelGoals()
 
 void KRLTool::LINgoalCallback(LINGoalHandle gh)
 {
-    if(lin_current_gh.getGoal() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
-    || ptp_current_gh.getGoal() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+    if(lin_current_gh.isValid() && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE
+    || ptp_current_gh.isValid() && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
     {
       gh.setRejected();
       log(Warning) << "Rejecting LIN Goal "<<gh.getGoal()<<" because another one is active"<<endlog();
@@ -182,10 +179,7 @@ void KRLTool::LINgoalCallback(LINGoalHandle gh)
 void KRLTool::LINcancelCallback(LINGoalHandle gh)
 {
     log(Warning) << "You asked to cancel the current LIN goal"<<endlog();
-    if(lin_current_gh == gh && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE) {
-    //   cancelMotion();
-        cancelGoals();
-    }
+    cancelMotion();
 }
 
 void KRLTool::Linear(
@@ -602,6 +596,7 @@ bool KRLTool::hasKRLReset()
 
 void KRLTool::cancelMotion()
 {
+    cancelGoals();
     setBit(toKRL.boolData,CANCEL_MOTION,true);
 }
 
@@ -647,12 +642,10 @@ void KRLTool::updateHook()
         {
 
             bool ack_ptp = getBit(to_krl_bool_data,PTP_CMD)
-                && ptp_current_gh.getGoal()
                 && ptp_current_gh.isValid()
                 && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE;
 
             bool ack_lin = getBit(to_krl_bool_data,LIN_CMD)
-                && lin_current_gh.getGoal()
                 && lin_current_gh.isValid()
                 && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE;
 
@@ -698,8 +691,7 @@ void KRLTool::updateHook()
 
     if(getBit(fromKRL.boolData,CANCEL_MOTION))
     {
-        lin_current_gh.setCanceled(lin_result);
-        ptp_current_gh.setCanceled(ptp_result);
+        cancelGoals();
         setBit(toKRL.boolData,CANCEL_MOTION,false);
     }
 

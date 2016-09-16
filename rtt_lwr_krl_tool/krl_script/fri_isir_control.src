@@ -1,5 +1,5 @@
 &ACCESS RVO
-&REL 66
+&REL 70
 &COMMENT ISIR-CNRS 2016
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM tool_number = 10
@@ -93,14 +93,6 @@ repeat
 
   ;FOLD Wait for KRL_LOOP_REQUESTED
   ; Reset Advance run pointer (dafuq ?!)
-  $ADVANCE = 3
-  INTERRUPT ON 4
-  INTERRUPT ON 5
-  INTERRUPT ON 7
-
-  if($fri_to_bool[2] == true) then
-    INTERRUPT ON 8
-  endif
 
   wait_for_loop_request()
 
@@ -193,6 +185,14 @@ END
 ;ENDFOLD
 
 def wait_for_loop_request()
+  $ADVANCE = 3
+  INTERRUPT ON 4
+  INTERRUPT ON 5
+  INTERRUPT ON 7
+
+  if($fri_to_bool[2] == true) then
+    INTERRUPT ON 8
+  endif
 
   for i=1 to 16
     if( (i <> 9) AND (i <> 8) AND (i <> 2) ) then
@@ -342,6 +342,8 @@ DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
     ;  $ACC_AXIS[I]  = $fri_frm_rea[7]
     ;  $ACC_EXTAX[I] = $fri_frm_rea[7]
     ;ENDFOR
+    BAS(#ACC_PTP , $fri_frm_rea[7] )
+    BAS(#VEL_PTP , $fri_frm_rea[7] )
 
   endif
 
@@ -382,21 +384,22 @@ DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
   return CLAMP_AXES(JOINT_OUT)
 ENDFCT
 
-DEFFCT POS BuildCartCmdFromFRI(use_relative:IN)
-  DECL POS CART_OUT
+DEFFCT E6POS BuildCartCmdFromFRI(use_relative:IN)
+  DECL E6POS CART_OUT
   BOOL use_relative
+
+  CART_OUT = $POS_ACT
 
   if ( (0 < $fri_frm_rea[7]) AND ($fri_frm_rea[7] <= 100.0 ) ) then
 
-    ;BAS(#VEL_CP, $fri_frm_rea[7] )
-    ;BAS(#ACC_CP, $fri_frm_rea[7] )
+    ;$VEL.CP = $fri_frm_rea[7] * 2.0 / 100.0;
+    BAS(#VEL_CP, $fri_frm_rea[7] * 2.0 / 100.0 )
+    BAS(#ACC_CP, $fri_frm_rea[7] * 2.0 / 100.0 )
 
   endif
 
   if(use_relative) then
     CART_OUT = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
-  else
-    CART_OUT = $POS_ACT
   endif
 
   if( $fri_frm_bool[10] ) then
@@ -489,10 +492,10 @@ def execute_PTP()
 
     if(use_rel) then
       PTP_REL BuildJntCmdFromFRI(true)
-      ;$ADVANCE = 0
+      $ADVANCE = 0
     else
       PTP BuildJntCmdFromFRI(false)
-      ;$ADVANCE = 0
+      $ADVANCE = 0
 
     endif
 
@@ -500,10 +503,10 @@ def execute_PTP()
 
     if(use_rel) then
       PTP_REL BuildCartCmdFromFRI(true)
-      ;$ADVANCE = 0
+      $ADVANCE = 0
     else
       PTP BuildCartCmdFromFRI(false)
-      ;$ADVANCE = 0
+      $ADVANCE = 0
     endif
 
   endswitch
@@ -524,17 +527,17 @@ def execute_LIN()
 
   if(use_rel) then
     LIN_REL BuildCartCmdFromFRI(true)
-    ;$ADVANCE = 0
+    $ADVANCE = 0
   else
     LIN BuildCartCmdFromFRI(false)
-    ;$ADVANCE = 0
+    $ADVANCE = 0
   endif
 
   case 2
 
   if(use_rel) then
     LIN_REL BuildCartCmdFromFRI(true) #TOOL
-    ;$ADVANCE = 0
+    $ADVANCE = 0
   endif
 
   endswitch
