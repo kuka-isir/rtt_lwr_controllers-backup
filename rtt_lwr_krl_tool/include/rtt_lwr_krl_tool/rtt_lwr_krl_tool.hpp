@@ -23,7 +23,7 @@
 #include <std_msgs/Int32MultiArray.h>
 
 #include <geometry_msgs/Vector3.h>
-
+#include <geometry_msgs/WrenchStamped.h>
 #include <std_srvs/Trigger.h>
 #include <std_srvs/Empty.h>
 
@@ -95,6 +95,8 @@ protected:
     RTT::OutputPort<tFriKrlData> port_toKRL;
     tFriKrlData toKRL;
     tFriKrlData fromKRL;
+    geometry_msgs::WrenchStamped ft_sensor_wrench;
+    RTT::InputPort<geometry_msgs::WrenchStamped> port_ft_sensor;
     RTT::InputPort<std_msgs::Int32MultiArray> port_intDataToKRL_ros;
     RTT::OutputPort<std_msgs::Int32MultiArray> port_intDataFromKRL_ros;
     std_msgs::Int32MultiArray intDataToKRL;

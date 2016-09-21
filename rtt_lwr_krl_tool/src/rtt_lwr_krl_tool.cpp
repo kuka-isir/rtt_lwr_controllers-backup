@@ -24,6 +24,9 @@ is_joint_torque_control_mode(false)
     this->ports()->addPort("realDataFromKRL_ros",port_realDataFromKRL_ros).doc("");
     this->ports()->addPort("boolDataFromKRL_ros",port_boolDataFromKRL_ros).doc("");
 
+    //FT Sensor Monitoring
+    this->ports()->addPort("ft_sensor_in",port_ft_sensor).doc("");
+
     this->addOperation("setJointImpedanceControlMode",&KRLTool::setJointImpedanceControlMode,this);
     this->addOperation("setJointTorqueControlMode",&KRLTool::setJointTorqueControlMode,this);
     this->addOperation("setJointPositionControlMode",&KRLTool::setJointPositionControlMode,this);
@@ -676,6 +679,36 @@ void KRLTool::updateHook()
 
             // log(Info) << "----- ACKED   -----" << endlog();
         }
+
+        if(lin_current_gh.isValid()
+        && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE)
+        {
+            // Feedback on LIN
+            FlowStatus f = port_ft_sensor.readNewest(ft_sensor_wrench);
+            double fx = ft_sensor_wrench.wrench.force.x;
+            double fy = ft_sensor_wrench.wrench.force.y;
+            double fz = ft_sensor_wrench.wrench.force.z;
+            double tx = ft_sensor_wrench.wrench.torque.x;
+            double ty = ft_sensor_wrench.wrench.torque.y;
+            double tz = ft_sensor_wrench.wrench.torque.z;
+
+            double norm_f = std::sqrt(fx*fx + fy*fy + fz*fz);
+
+            if(lin_current_gh.getGoal()->stop_on_force && (f == NoData || !port_ft_sensor.connected()))
+            {
+                log(Error) << "You asked to stop on force, but nothing seems to be connected to "<<port_ft_sensor.getName() << endlog();
+            }
+
+            if(lin_current_gh.getGoal()->stop_on_force
+            && norm_f >= lin_current_gh.getGoal()->max_allowed_force)
+            {
+                // Stop The mouvement, we reach the max allowed force
+                setBit(toKRL.boolData,CANCEL_MOTION,true);
+                lin_current_gh.setAborted();
+                log(Warning) << "LIN Goal was aborted because max force was reached ("<<norm_f<<" N)"<<endlog();
+            }
+        }
+        // log(Debug) << "Waiting for ack from KRC" << endlog();
     }
     else
     {
@@ -691,7 +724,6 @@ void KRLTool::updateHook()
 
     if(getBit(fromKRL.boolData,CANCEL_MOTION))
     {
-        //cancelGoals();
         setBit(toKRL.boolData,CANCEL_MOTION,false);
     }
 
