@@ -1,8 +1,8 @@
-&ACCESS RVP
-&REL 71
+&ACCESS RVO
+&REL 73
 &COMMENT ISIR-CNRS 2016
-&PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM tool_number = 10
+&PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM fri_rate_ms = 1.0
 &PARAM base_number = 0
@@ -12,7 +12,7 @@ DEF fri_isir_control( )
 ; Copyright ISIR-CNRS 2016
 ; Author: Antoine Hoarau
 ;ENDFOLD (ProgramInfo)
-
+ 
 ;FOLD INI
 ;FOLD BASISTECH INI
 GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
@@ -104,7 +104,8 @@ repeat
   ; $fri_frm_bool[2] = true set by PC to ack
 
   if($fri_frm_bool[2]==false AND $fri_to_bool[2]) then
-    INTERRUPT ON 8
+    continue
+    $fri_to_bool[2] = false
   endif
 
   wait_for_loop_request()
