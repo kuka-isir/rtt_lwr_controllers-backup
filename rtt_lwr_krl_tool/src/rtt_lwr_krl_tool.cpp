@@ -656,6 +656,7 @@ void KRLTool::updateHook()
 
             while(!hasKRLReset())
             {
+                verifySpecialCases();
                 port_toKRL.write(toKRL);
                 port_fromKRL.read(fromKRL);
                 usleep(250);
@@ -692,7 +693,7 @@ void KRLTool::updateHook()
             double ty = ft_sensor_wrench.wrench.torque.y;
             double tz = ft_sensor_wrench.wrench.torque.z;
 
-            double norm_f = std::sqrt(fx*fx + fy*fy + fz*fz);
+            double norm_f = std::sqrt(/*fx*fx + fy*fy +*/ fz*fz);
 
             if(lin_current_gh.getGoal()->stop_on_force && (f == NoData || !port_ft_sensor.connected()))
             {
@@ -717,15 +718,7 @@ void KRLTool::updateHook()
         has_cmd = false;
     }
 
-    if(getBit(fromKRL.boolData,SET_VEL))
-    {
-        setBit(toKRL.boolData,SET_VEL,false);
-    }
-
-    if(getBit(fromKRL.boolData,CANCEL_MOTION))
-    {
-        setBit(toKRL.boolData,CANCEL_MOTION,false);
-    }
+    verifySpecialCases();
 
     // Writing
     port_toKRL.write(toKRL);
@@ -756,7 +749,18 @@ void KRLTool::updateHook()
     port_boolDataFromKRL_ros.write(boolDataFromKRL);
 
 }
+void KRLTool::verifySpecialCases()
+{
+    if(getBit(fromKRL.boolData,SET_VEL))
+    {
+        setBit(toKRL.boolData,SET_VEL,false);
+    }
 
+    if(getBit(fromKRL.boolData,CANCEL_MOTION))
+    {
+        setBit(toKRL.boolData,CANCEL_MOTION,false);
+    }
+}
 void KRLTool::addNoAckNeededVar(int special_case)
 {
     bypass_ack_idx.push_back(special_case);

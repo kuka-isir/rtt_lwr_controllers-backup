@@ -185,6 +185,7 @@ protected:
     void setStiffnessZero();
 
 private:
+    void verifySpecialCases();
     void resetBoolToKRL();
     bool hasKRLReset();
     lwr_fri::FriJointImpedance cmd;
