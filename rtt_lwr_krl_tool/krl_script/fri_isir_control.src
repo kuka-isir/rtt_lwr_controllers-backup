@@ -1,5 +1,5 @@
 &ACCESS RVO
-&REL 73
+&REL 75
 &COMMENT ISIR-CNRS 2016
 &PARAM tool_number = 10
 &PARAM start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
@@ -45,7 +45,7 @@ INTERRUPT OFF 8
 ; Script Parameters
 tool_number = 10
 fri_rate_ms = 1.0
-start_pose = {a1 91.88,a2 112.87,a3 -102.22,a4 6.83,a5 55.73,a6 9.67,e1 -6.27}
+start_pose = {a1 90,a2 90,a3 -90,a4 0,a5 90,a6 0,e1 0}
 
 ;FOLD FRI Reset()
 
@@ -608,8 +608,10 @@ DEF resetRobotParams( )
  ;Frame for Cartesian Stiffness mode #TOOL or #BASE
  $STIFFNESS.FRAMETYPE = #BASE
 
- ;Cartesian Spring Stiffness [0.01, 5000] N/m
+ ;Cartesian Spring Stiffness XYZ [0.01, 5000] N/m
+ ; ABC [0.01, 300] Nm/rad
  $STIFFNESS.CPSTIFFNESS = {X 2000, Y 2000, Z 2000, A 200, B 200, C 200}
+ ;$STIFFNESS.CPSTIFFNESS = {X 750, Y 750, Z 750, A 50, B 50, C 50}
 
  ;Cartesian Spring Damping [0.1, 1.0] N*s/m
  $STIFFNESS.CPDAMPING = {X 0.7, Y 0.7, Z 0.7, A 0.7, B 0.7, C 0.7}
