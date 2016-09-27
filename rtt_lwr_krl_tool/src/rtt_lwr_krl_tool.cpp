@@ -230,12 +230,12 @@ void KRLTool::Linear(
 
     if( 0 <= vel_percent && vel_percent <= 100.0)
     {
-        toKRL.realData[CMD_VEL_PERCENT] = vel_percent;
+        toKRL.realData[CMD_VEL_PERCENT] = vel_percent / 2.0; // WARNING : 100% is 2m/s which is really too fast as hell
     }
     else
     {
-        toKRL.realData[CMD_VEL_PERCENT] = 100.0;
-        log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<")"<<endlog();
+        toKRL.realData[CMD_VEL_PERCENT] = 1.0;
+        log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<"), setting to 1% instead."<<endlog();
     }
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
@@ -528,8 +528,8 @@ void KRLTool::PointToPoint(
     }
     else
     {
-        toKRL.realData[CMD_VEL_PERCENT] = 100.0;
-        log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<")"<<endlog();
+        toKRL.realData[CMD_VEL_PERCENT] = 2.0;
+        log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<"), setting to 2%."<<endlog();
     }
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
