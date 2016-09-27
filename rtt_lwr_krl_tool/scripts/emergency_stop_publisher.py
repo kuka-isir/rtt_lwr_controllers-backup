@@ -14,10 +14,12 @@ from krl_msgs.srv import SetMaxVelPercent
 
 rospy.init_node("safety_stop")
 
-stop_zone = 1.0 # 1.4m
+stop_zone = 0.4 # 1.4m
 hysteresis = 0.2
-hysteresis_time = 1.0 # 1s
-oldest_ok = -1
+
+
+#hysteresis_time = 1.0 # 1s
+#oldest_ok = -1
 max_dist  = 2.0
 
 def distanceCB(msg):
