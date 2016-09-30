@@ -4,6 +4,7 @@ project(rtt_demo_load_comp)
 find_package(catkin REQUIRED COMPONENTS
     rtt_ros
     cmake_modules
+    kdl_conversions
 )
 
 find_package(Eigen REQUIRED)

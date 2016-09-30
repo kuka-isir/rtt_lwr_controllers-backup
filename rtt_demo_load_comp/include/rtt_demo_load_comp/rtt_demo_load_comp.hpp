@@ -24,6 +24,7 @@
 #include <rtt/InputPort.hpp>
 #include <rtt/OutputPort.hpp>
 #include <geometry_msgs/WrenchStamped.h>
+#include <kdl_conversions/kdl_msg.h>
 
 class LoadCompDemo : public RTT::TaskContext
 {
@@ -35,9 +36,9 @@ public:
     Eigen::VectorXd damping;
 
 protected:
-    
+
     RTT::InputPort<geometry_msgs::WrenchStamped> port_ftdata;
-    
+
     RTT::InputPort<Eigen::VectorXd>  port_joint_position_in,
                                     port_joint_velocity_in;
     // Some input variables
@@ -57,7 +58,7 @@ protected:
     bool add_damping;
     bool compensate_coriolis;
     Eigen::VectorXd kg;
-    
+
     Eigen::Affine3d tool_in_base_frame_eigen;
     bool use_ft_sensor;
     std::string ft_sensor_link;

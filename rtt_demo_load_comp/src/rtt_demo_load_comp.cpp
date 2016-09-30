@@ -42,9 +42,9 @@ bool LoadCompDemo::configureHook()
     jnt_trq_cmd_out.setZero(arm.getNrOfJoints());
 
     port_joint_torque_cmd_out.setDataSample(jnt_trq_cmd_out);
-    
+
     rtt_ros_kdl_tools::getAllPropertiesFromROSParam(this);
-    
+
 
     return true;
 }
@@ -62,10 +62,15 @@ void LoadCompDemo::updateHook()
 
     arm.setState(jnt_pos_in,jnt_vel_in);
     arm.updateModel();
-    
-    arm.setExternalMeasuredWrench(ft_msg.wrench,arm.getSegmentIndex(ft_sensor_link));
 
-    KDL::JntArray& ext_t = arm.computeExternalWrenchTorque(jnt_pos_in,jnt_vel_in * (compensate_coriolis ? 1 : 0),true);
+    KDL::Wrench wrench_kdl;
+    tf::wrenchMsgToKDL(ft_msg.wrench,wrench_kdl);
+
+    arm.setExternalMeasuredWrench(wrench_kdl,arm.getSegmentIndex(ft_sensor_link));
+
+    arm.computeExternalWrenchTorque(jnt_pos_in,true);
+
+    KDL::JntArray& ext_t = arm.getExternalWrenchTorque();
 
     log(Debug) << "External torque : "<<ext_t.data.transpose()<<endlog();
 
