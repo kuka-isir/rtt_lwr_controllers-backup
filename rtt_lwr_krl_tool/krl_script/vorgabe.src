@@ -1,0 +1,14 @@
+DEF  VORGABE ( )
+
+; User Parameters
+
+fri_rate_ms = 1.0
+tool_number = 10
+base_number = 0
+start_pose = {a1 90,a2 90,a3 -90,a4 0,a5 90,a6 0,e1 0}
+
+;FOLD FRI ISIR Control ()
+fri_isir(fri_rate_ms,tool_number,base_number,start_pose)
+;ENDFOLD
+
+END
