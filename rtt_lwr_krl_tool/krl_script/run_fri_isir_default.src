@@ -1,4 +1,7 @@
-DEF  VORGABE ( )
+&ACCESS RVP
+&PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
+&PARAM EDITMASK = *
+DEF run_fri_isir_default( )
 
 ; User Parameters
 

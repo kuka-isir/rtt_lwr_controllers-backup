@@ -1,11 +1,11 @@
 &ACCESS RVO1
-&REL 1
+&REL 2
 &COMMENT ISIR-CNRS 2016
 &PARAM EDITMASK = *
 DEF fri_isir(fri_rate_ms:IN,tool_number:IN,base_number:IN,start_pose:IN )
-
+ 
 ; Parameters
-REAL fri_rate_ms
+INT fri_rate_ms
 INT tool_number
 INT base_number
 DECL E6AXIS start_pose
@@ -19,10 +19,11 @@ DECL INT command_input_type
 GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
 INTERRUPT ON 3
 BAS (#INITMOV,0 )
-INTERRUPT DECL 4 WHEN $FRI_FRM_BOOL[8]==TRUE DO do_stop2()
-INTERRUPT DECL 5 WHEN $FRI_FRM_BOOL[9]==TRUE DO set_vel()
+INTERRUPT DECL 4 WHEN $fri_frm_bool[8]==TRUE DO do_stop2()
+INTERRUPT DECL 5 WHEN $fri_frm_bool[9]==TRUE DO set_vel()
 $TIMER_STOP[1] = TRUE
 $TIMER[1] = 0
+INTERRUPT DECL 6 WHEN $fri_frm_int[5]>=1 DO execute_FRI_command()
 INTERRUPT DECL 7 WHEN $fri_frm_bool[2] DO cancel_motion()
 INTERRUPT ON
 
@@ -36,6 +37,7 @@ endif
 $fri_to_int[1] = 0
 $fri_to_int[2] = 10
 $fri_to_int[3] = tool_number
+$fri_to_int[4] = base_number
 
 reset_robot_stiffness()
 
@@ -52,6 +54,7 @@ PTP start_pose C_PTP
 WAIT SEC 0.1
 $TIMER_STOP[1] = FALSE
 
+$fri_to_int[8] = fri_rate_ms
 fri_open(fri_rate_ms,true)
 
 PTP start_pose
@@ -671,3 +674,25 @@ deffct real clamp(v:in, minval:in, maxval:in)
 
   return r
 endfct
+
+def execute_FRI_command()
+
+  switch $fri_frm_int[5]
+  case 1
+    if( (1 <= $fri_frm_int[8]) AND ($fri_frm_int[8] <= 1000)) then
+      fri_open($fri_frm_int[8],true)
+    else
+      fri_open($fri_to_int[8],true)
+    endif
+  case 2
+    fri_start()
+  case 3
+    fri_stop()
+  case 4
+    fri_close()
+  endswitch
+  $fri_to_int[5] = 1
+  wait for ($fri_frm_int[5] == 0)
+  $fri_to_int[5] = 0
+
+end

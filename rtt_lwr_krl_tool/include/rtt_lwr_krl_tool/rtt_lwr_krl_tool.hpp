@@ -82,6 +82,10 @@ public:
     bool configureHook();
     bool startHook();
     void stopHook();
+    void FRIOpen(int period_ms = 1 /*ms*/);
+    void FRIStart();
+    void FRIStop();
+    void FRIClose();
 
 // Actionlib Callbacks
 protected:
@@ -112,11 +116,11 @@ protected:
     void printInt();
     void printReal();
     void printAll();
-
+    void sendFRICommand(int cmd,bool wait_until_done = true);
 
 private: void PointToPoint(
     const std::vector<double>& ptp,
-    const std::vector<double>& mask,
+    const std::vector<bool>& mask,
     const geometry_msgs::Vector3& XYZ,
     const geometry_msgs::Vector3& RPY,
     const geometry_msgs::Vector3& XYZ_mask,
@@ -126,12 +130,6 @@ private: void PointToPoint(
     bool use_rel,
     double vel_percent);
 
-// protected:
-//     void PTP(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians, double vel_ptp);
-//     void PTP_REL(const std::vector< double >& ptp, const std::vector< double >& mask, bool use_radians, double vel_ptp);
-//     void PTP_POS(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad, bool use_ptp_rel,double vel_ptp);
-//     void LIN_REL(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
-//     void LIN(const geometry_msgs::Vector3& XYZ_meters, const geometry_msgs::Vector3& RPY_rad);
 private: void Linear(
     const geometry_msgs::Vector3& XYZ_meters,
     const geometry_msgs::Vector3& RPY_rad,

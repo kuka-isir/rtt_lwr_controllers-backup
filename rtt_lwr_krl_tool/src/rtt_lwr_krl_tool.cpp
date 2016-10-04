@@ -42,10 +42,12 @@ is_joint_torque_control_mode(false)
 
     this->addOperation("resetJointImpedanceGains",&KRLTool::resetJointImpedanceGains,this);
     this->addOperation("setStiffnessZero",&KRLTool::setStiffnessZero,this);
-    // this->addOperation("PTP",&KRLTool::PTP,this);
-    // this->addOperation("PTP_REL",&KRLTool::PTP_REL,this);
-    // this->addOperation("LIN",&KRLTool::LIN,this);
-    // this->addOperation("LIN_REL",&KRLTool::LIN_REL,this);
+
+    this->provides("FRI")->addOperation("open",&KRLTool::FRIOpen,this);
+    this->provides("FRI")->addOperation("start",&KRLTool::FRIStart,this);
+    this->provides("FRI")->addOperation("stop",&KRLTool::FRIStop,this);
+    this->provides("FRI")->addOperation("close",&KRLTool::FRIClose,this);
+
     this->addOperation("printBool",&KRLTool::printBool,this);
     this->addOperation("printInt",&KRLTool::printInt,this);
     this->addOperation("printReal",&KRLTool::printReal,this);
@@ -81,6 +83,42 @@ is_joint_torque_control_mode(false)
 
 }
 
+void KRLTool::sendFRICommand(int cmd,bool wait_until_done)
+{
+    toKRL.intData[FRI_CMD] = cmd;
+    if(wait_until_done)
+    {
+        port_toKRL.write(toKRL);
+        port_fromKRL.read(fromKRL);
+        while(fromKRL.intData[FRI_CMD] != 1)
+        {
+            port_fromKRL.read(fromKRL);
+            usleep(500);
+            //log(Info) << "----- Waiting -----" << endlog();
+        }
+        toKRL.intData[FRI_CMD] = 0;
+    }
+}
+
+void KRLTool::FRIOpen(int period_ms)
+{
+    if(1 < period_ms && period_ms <= 1000)
+        toKRL.intData[FRI_PERIOD_MS] = period_ms;
+    sendFRICommand(FRI_OPEN);
+}
+void KRLTool::FRIStart()
+{
+    sendFRICommand(FRI_START);
+}
+void KRLTool::FRIStop()
+{
+    sendFRICommand(FRI_STOP);
+}
+void KRLTool::FRIClose()
+{
+    sendFRICommand(FRI_CLOSE);
+}
+
 void KRLTool::resetData()
 {
     toKRL.boolData = 0;
@@ -101,7 +139,13 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
       return;
     }
     std::vector<double> ptp_cmd(LBR_MNJ,0.0);
-    std::vector<double> ptp_mask(LBR_MNJ,0);
+    std::vector<bool> ptp_mask(LBR_MNJ,false);
+
+    if(gh.getGoal()->ptp_mask.size() != gh.getGoal()->ptp_goal.size())
+    {
+        log(Error) << "ptp command and mask sizes don't match ("<<gh.getGoal()->ptp_goal.size()<<"!="<<gh.getGoal()->ptp_mask.size()<<")"<<endlog();
+        return;
+    }
 
     for(int i=0;i<ptp_cmd.size()
     && i<gh.getGoal()->ptp_mask.size()
@@ -109,7 +153,7 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
     {
         if(gh.getGoal()->ptp_mask[i])
         {
-            ptp_mask[i] = 1;
+            ptp_mask[i] = true;
             ptp_cmd[i] = gh.getGoal()->ptp_goal[i];
         }
     }
@@ -449,7 +493,7 @@ bool KRLTool::setCartesianImpedanceControlModeROSService(std_srvs::EmptyRequest&
 
 void KRLTool::PointToPoint(
     const std::vector<double>& ptp,
-    const std::vector<double>& mask,
+    const std::vector<bool>& mask,
     const geometry_msgs::Vector3& XYZ,
     const geometry_msgs::Vector3& RPY,
     const geometry_msgs::Vector3& XYZ_mask,

@@ -31,7 +31,8 @@ enum FRI_INT_DATA_DESCRIPTION
     BASE,
     FRI_CMD,
     USE_RELATIVE, // 0 is false, 1 is true
-    CMD_INPUT_TYPE // 0 is Joint, 1 is Cartesian in base Frame, 2 is Cartesian in Tool Frame
+    CMD_INPUT_TYPE, // 0 is Joint, 1 is Cartesian in base Frame, 2 is Cartesian in Tool Frame
+    FRI_PERIOD_MS
 };
 
 enum COMMAND_INPUT_TYPE
@@ -43,10 +44,11 @@ enum COMMAND_INPUT_TYPE
 
 enum FRI_COMMAND
 {
-    FRI_START = 0,
+    FRI_OPEN = 1,
+    FRI_START,
     FRI_STOP,
     FRI_CLOSE
-};
+}FriCommand;
 
 enum FRI_REAL_DATA_DESCRIPTION
 {
