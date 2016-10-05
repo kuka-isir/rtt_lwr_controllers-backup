@@ -1,4 +1,4 @@
-&ACCESS RVP
+&ACCESS RV
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM EDITMASK = *
 DEF run_fri_isir_default( )
@@ -8,10 +8,10 @@ DEF run_fri_isir_default( )
 fri_rate_ms = 1
 tool_number = 10
 base_number = 0
-start_pose = {a1 90,a2 90,a3 -90,a4 0,a5 90,a6 0,e1 0}
-
+start_pos   = {a1 90,a2 90,a3 -90,a4 0,a5 90,a6 0,e1 0}
+init_at_start_pos = true
 ;FOLD FRI ISIR Control ()
-fri_isir(fri_rate_ms,tool_number,base_number,start_pose)
+fri_isir(fri_rate_ms,tool_number,base_number,start_pos,init_at_start_pos)
 ;ENDFOLD
 
 END

@@ -9,9 +9,10 @@ EXT  BAS (BAS_COMMAND  :IN,REAL  :IN )
 DECL INT fri_rate_ms
 DECL INT tool_number
 DECL INT base_number
-DECL E6AXIS start_pose
+DECL E6AXIS start_pos
+DECL BOOL init_at_start_pos
 
-EXT fri_isir(INT:IN,INT:IN,INT:IN,E6AXIS:IN )
+EXT fri_isir(INT:IN,INT:IN,INT:IN,E6AXIS:IN,BOOL:IN )
 
 
 ;ENDFOLD (BASISTECH EXT)
