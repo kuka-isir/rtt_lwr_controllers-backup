@@ -2,6 +2,20 @@
 // Author: Antoine Hoarau <hoarau.robotics@gmail.com>
 
 #include "rtt_lwr_krl_tool/rtt_lwr_krl_tool.hpp"
+#include <exception>
+
+static geometry_msgs::Vector3 Vector3Msg(const std::vector<double>& xyz)
+{
+    if(xyz.size() != 3)
+    {
+        throw std::runtime_error("Size should be 3 !");
+    }
+    geometry_msgs::Vector3 v;
+    v.x = xyz[0];
+    v.y = xyz[1];
+    v.z = xyz[2];
+    return v;
+}
 
 namespace lwr{
 using namespace RTT;
@@ -11,7 +25,7 @@ using namespace RTT::os;
 KRLTool::KRLTool(const std::string& name):
 TaskContext(name),
 do_send_imp_cmd(false),
-// startPTP(LBR_MNJ),
+has_cmd(false),
 // startLIN(3),
 is_joint_torque_control_mode(false)
 {
@@ -69,7 +83,13 @@ is_joint_torque_control_mode(false)
 
     this->addOperation("resetData",&KRLTool::resetData,this);
 
-    // this->provides("PTP")->addOperation("move")
+    this->provides("PTP")->addOperation("moveJoint",&KRLTool::PTPJoint,this).doc("Angles in radians");
+    this->provides("PTP")->addOperation("moveCartesian",&KRLTool::PTPCartesian,this).doc("Angles in radians");
+    this->provides("PTP")->addOperation("moveCartesianXYZ",&KRLTool::PTPCartesianXYZ,this).doc("Angles in radians");
+    this->provides("PTP")->addOperation("moveCartesianRPY",&KRLTool::PTPCartesianRPY,this).doc("Angles in radians");
+    this->provides("LIN")->addOperation("moveXYZ",&KRLTool::LIN_XYZ,this).doc("XYZ in meters");
+    this->provides("LIN")->addOperation("moveRPY",&KRLTool::LIN_RPY,this).doc("Angles in radians");
+    this->provides("LIN")->addOperation("move",&KRLTool::LIN,this).doc("Angles in radians");
 
     for(unsigned int i=0;i<FRI_USER_SIZE;i++)
     {
@@ -204,10 +224,11 @@ void KRLTool::PTPgoalCallback(PTPGoalHandle gh)
         gh.getGoal()->RPY,
         gh.getGoal()->XYZ_mask,
         gh.getGoal()->RPY_mask,
-        gh.getGoal()->use_radians,
         gh.getGoal()->ptp_input_type,
+        gh.getGoal()->use_radians,
         gh.getGoal()->use_relative,
-        gh.getGoal()->vel_percent
+        gh.getGoal()->vel_percent,
+        false
     );
 
     gh.setAccepted();
@@ -251,9 +272,10 @@ void KRLTool::LINgoalCallback(LINGoalHandle gh)
         gh.getGoal()->RPY,
         gh.getGoal()->XYZ_mask,
         gh.getGoal()->RPY_mask,
+        gh.getGoal()->in_tool_frame,
+        true,
         gh.getGoal()->use_relative,
-        gh.getGoal()->vel_percent,
-        gh.getGoal()->in_tool_frame
+        gh.getGoal()->vel_percent
     );
     gh.setAccepted();
     lin_current_gh = gh;
@@ -270,12 +292,12 @@ void KRLTool::Linear(
     const geometry_msgs::Vector3& RPY_rad,
     const geometry_msgs::Vector3& XYZ_mask,
     const geometry_msgs::Vector3& RPY_mask,
+    bool in_tool_frame,
+    bool use_radians,
     bool use_rel,
     double vel_percent,
-    bool in_tool_frame)
+    bool wait_until_done)
 {
-    bool use_radians = true;
-
     double conv = 1.0;
 
     if(use_radians)
@@ -318,6 +340,13 @@ void KRLTool::Linear(
         log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<"), setting to 1% instead."<<endlog();
     }
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
+
+    if(wait_until_done)
+    {
+        do{
+            this->trigger();
+        }while(this->has_cmd);
+    }
 }
 
 void KRLTool::sendSTOP2()
@@ -534,10 +563,11 @@ void KRLTool::PointToPoint(
     const geometry_msgs::Vector3& RPY,
     const geometry_msgs::Vector3& XYZ_mask,
     const geometry_msgs::Vector3& RPY_mask,
-    bool use_radians,
     int ptp_input_type,
+    bool use_radians,
     bool use_rel,
-    double vel_percent)
+    double vel_percent,
+    bool wait_until_done)
 {
     if(ptp_input_type == JOINT && ptp.size() != LBR_MNJ)
     {
@@ -612,6 +642,13 @@ void KRLTool::PointToPoint(
         log(Error) << "Vel percent should be between [0:100.], you provided ("<<vel_percent<<"), setting to 2%."<<endlog();
     }
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
+
+    if(wait_until_done)
+    {
+        do{
+            this->trigger();
+        }while(this->has_cmd);
+    }
 }
 
 bool KRLTool::setBase(int base_number)
@@ -735,10 +772,136 @@ void KRLTool::cancelMotion()
     setBit(toKRL.boolData,CANCEL_MOTION,true);
 }
 
+void KRLTool::PTPJoint(
+    const std::vector<double>& ptp_goal_rad,
+    const std::vector<double>& mask,
+    bool use_rel,
+    double vel_percent)
+{
+    std::vector<bool> mask_bool(mask.size(),false);
+
+    for(int i = 0 ; i < mask_bool.size() ; ++i)
+        mask_bool[i] = static_cast<bool>(mask[i]);
+
+    PointToPoint(ptp_goal_rad,mask_bool,
+        geometry_msgs::Vector3(),
+        geometry_msgs::Vector3(),
+        geometry_msgs::Vector3(),
+        geometry_msgs::Vector3(),
+        JOINT,
+        true,use_rel,vel_percent,true);
+}
+
+void KRLTool::PTPCartesian(
+    const std::vector<double>& XYZ_meters,
+    const std::vector<double>& RPY_rad,
+    bool use_rel,
+    double vel_percent)
+{
+    if(XYZ_meters.size() != 3 || RPY_rad.size() != 3 )
+    {
+        log(Error) << "Vector size should be 3 !"<<endlog();
+        return;
+    }
+    PointToPoint(std::vector<double>(),std::vector<bool>(),
+        Vector3Msg(XYZ_meters),
+        Vector3Msg(RPY_rad),
+        geometry_msgs::Vector3(),
+        geometry_msgs::Vector3(),
+        CARTESIAN_IN_BASE,
+        true,use_rel,vel_percent,true);
+}
+void KRLTool::PTPCartesianXYZ(
+    const std::vector<double>& XYZ_meters,
+    const std::vector<double>& XYZ_mask,
+    bool use_rel,
+    double vel_percent)
+{
+    if(XYZ_meters.size() != 3 || XYZ_mask.size() != 3 )
+    {
+        log(Error) << "Vector size should be 3 !"<<endlog();
+        return;
+    }
+    PointToPoint(std::vector<double>(),std::vector<bool>(),
+        Vector3Msg(XYZ_meters),
+        geometry_msgs::Vector3(),
+        Vector3Msg(XYZ_mask),
+        geometry_msgs::Vector3(),
+        CARTESIAN_IN_BASE,
+        true,use_rel,vel_percent,true);
+}
+void KRLTool::PTPCartesianRPY(
+    const std::vector<double>& RPY_rad,
+    const std::vector<double>& RPY_mask,
+    bool use_rel,
+    double vel_percent)
+{
+    if( RPY_rad.size() != 3 || RPY_mask.size() != 3)
+    {
+        log(Error) << "Vector size should be 3 !"<<endlog();
+        return;
+    }
+    PointToPoint(std::vector<double>(),std::vector<bool>(),
+        geometry_msgs::Vector3(),
+        Vector3Msg(RPY_rad),
+        geometry_msgs::Vector3(),
+        Vector3Msg(RPY_mask),
+        CARTESIAN_IN_BASE,
+        true,use_rel,vel_percent,true);
+}
+
+void KRLTool::LIN(
+    const std::vector<double>& XYZ_meters,
+    const std::vector<double>& RPY_rad,
+    bool in_tool_frame,
+    bool use_rel,
+    double vel_percent)
+{
+    if(XYZ_meters.size() != 3 || RPY_rad.size() != 3)
+    {
+        log(Error) << "Vector size should be 3 !"<<endlog();
+        return;
+    }
+    geometry_msgs::Vector3 ones;
+    ones.x = ones.y = ones.z = 1;
+    Linear(Vector3Msg(XYZ_meters),Vector3Msg(RPY_rad),ones,ones,in_tool_frame,true,use_rel,vel_percent,true);
+}
+
+void KRLTool::LIN_XYZ(
+    const std::vector<double>& XYZ_meters,
+    const std::vector<double>& XYZ_mask,
+    bool in_tool_frame,
+    bool use_rel,
+    double vel_percent)
+{
+    if(XYZ_meters.size() != 3 || XYZ_mask.size() != 3)
+    {
+        log(Error) << "Vector size should be 3 !"<<endlog();
+        return;
+    }
+    geometry_msgs::Vector3 zero;
+    Linear(Vector3Msg(XYZ_meters),zero,Vector3Msg(XYZ_mask),zero,in_tool_frame,true,use_rel,vel_percent,true);
+}
+
+void KRLTool::LIN_RPY(
+    const std::vector<double>& RPY_rad,
+    const std::vector<double>& RPY_mask,
+    bool in_tool_frame,
+    bool use_rel,
+    double vel_percent)
+{
+    if(RPY_rad.size() != 3 || RPY_mask.size() != 3)
+    {
+        log(Error) << "Vector size should be 3 !"<<endlog();
+        return;
+    }
+    geometry_msgs::Vector3 zero;
+    Linear(zero,Vector3Msg(RPY_rad),zero,Vector3Msg(RPY_mask),in_tool_frame,true,use_rel,vel_percent,true);
+}
+
 void KRLTool::updateHook()
 {
     static bool first_loop = true;
-    static bool has_cmd = false;
     static fri_uint16_t to_krl_bool_data = 0;
 
     if(!first_loop)

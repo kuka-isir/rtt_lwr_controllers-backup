@@ -87,6 +87,50 @@ public:
     bool FRIStart();
     bool FRIStop();
     bool FRIClose();
+    void PTPJoint(
+        const std::vector<double>& ptp_goal_rad,
+        const std::vector<double>& mask,
+        bool use_rel,
+        double vel_percent);
+
+    void PTPCartesian(
+        const std::vector<double>& XYZ_meters,
+        const std::vector<double>& RPY_rad,
+        bool use_rel,
+        double vel_percent);
+
+    void PTPCartesianXYZ(
+        const std::vector<double>& XYZ_meters,
+        const std::vector<double>& XYZ_mask,
+        bool use_rel,
+        double vel_percent);
+
+    void PTPCartesianRPY(
+        const std::vector<double>& RPY_rad,
+        const std::vector<double>& RPY_mask,
+        bool use_rel,
+        double vel_percent);
+
+    void LIN_XYZ(
+        const std::vector<double>& XYZ_meters,
+        const std::vector<double>& XYZ_mask,
+        bool in_tool_frame,
+        bool use_rel,
+        double vel_percent);
+
+    void LIN_RPY(
+        const std::vector<double>& RPY_rad,
+        const std::vector<double>& RPY_mask,
+        bool in_tool_frame,
+        bool use_rel,
+        double vel_percent);
+
+    void LIN(
+        const std::vector<double>& XYZ,
+        const std::vector<double>& RPY_rad,
+        bool in_tool_frame,
+        bool use_rel,
+        double vel_percent);
 
 // Actionlib Callbacks
 protected:
@@ -126,19 +170,24 @@ private: void PointToPoint(
     const geometry_msgs::Vector3& RPY,
     const geometry_msgs::Vector3& XYZ_mask,
     const geometry_msgs::Vector3& RPY_mask,
-    bool use_radians,
     int ptp_input_type,
+    bool use_radians,
     bool use_rel,
-    double vel_percent);
+    double vel_percent,
+    bool wait_until_done = false
+    );
 
 private: void Linear(
     const geometry_msgs::Vector3& XYZ_meters,
-    const geometry_msgs::Vector3& RPY_rad,
+    const geometry_msgs::Vector3& RPY,
     const geometry_msgs::Vector3& XYZ_mask,
     const geometry_msgs::Vector3& RPY_mask,
+    bool in_tool_frame,
+    bool use_radians,
     bool use_rel,
     double vel_percent,
-    bool in_tool_frame = false);
+    bool wait_until_done = false
+    );
 
 protected:
     void addNoAckNeededVar(int special_case);
@@ -192,6 +241,7 @@ private:
     bool do_send_imp_cmd;
     bool is_initialized;
     std::vector<int> bypass_ack_idx;
+    bool has_cmd;
 };
 }
 ORO_CREATE_COMPONENT(lwr::KRLTool)
