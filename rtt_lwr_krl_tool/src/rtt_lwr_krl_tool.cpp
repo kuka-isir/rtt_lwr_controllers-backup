@@ -130,26 +130,38 @@ bool KRLTool::FRIClose()
     return sendFRICommand(FRI_CLOSE);
 }
 
-void KRLTool::resetData()
+bool KRLTool::resetData()
 {
     toKRL.boolData = 0;
     for (size_t i = 0; i < FRI_USER_SIZE; i++) {
         toKRL.intData[i] = toKRL.realData[i] = 0;
     }
+    bool wait_until_done = true;
     toKRL.intData[RESET_ALL_DATA] = 1;
-    port_toKRL.write(toKRL);
-    port_fromKRL.read(fromKRL);
-    while(fromKRL.intData[RESET_ALL_DATA] != 1)
+
+    if(wait_until_done)
     {
-        port_fromKRL.read(fromKRL);
-        usleep(500);
-        //log(Info) << "----- Waiting -----" << endlog();
+      port_toKRL.write(toKRL);
+      port_fromKRL.read(fromKRL);
+      TimeService::ticks timestamp = TimeService::Instance()->getTicks();
+      while(fromKRL.intData[RESET_ALL_DATA] != 1)
+      {
+          if(TimeService::Instance()->secondsSince( timestamp ) > RTT::Seconds(5.0))
+          {
+              log(Error) << "\n\n\n Could not reset FRI data, please restart the KRL script. \n\n" << endlog();
+              return false;
+          }
+          port_fromKRL.read(fromKRL);
+          usleep(500);
+          //log(Info) << "----- Waiting -----" << endlog();
+      }
+      toKRL.boolData = 0;
+      for (size_t i = 0; i < FRI_USER_SIZE; i++) {
+          toKRL.intData[i] = toKRL.realData[i] = 0;
+      }
+      port_toKRL.write(toKRL);
     }
-    toKRL.boolData = 0;
-    for (size_t i = 0; i < FRI_USER_SIZE; i++) {
-        toKRL.intData[i] = toKRL.realData[i] = 0;
-    }
-    port_toKRL.write(toKRL);
+    return true;
 }
 
 // Called by ptp_action_server_ when a new goal is received
@@ -602,17 +614,69 @@ void KRLTool::PointToPoint(
     setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
 }
 
-void KRLTool::setBase(int base_number)
+bool KRLTool::setBase(int base_number)
 {
-  toKRL.intData[BASE] = base_number;
-  setBit(toKRL.boolData,SET_BASE,true);
-  setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
+    if( ! (0 < base_number && base_number <= 16) )
+    {
+        log(Error) << "Base number should be beetween [1:16]" << endlog();
+        return false;
+    }
+    bool wait_until_done = true;
+    toKRL.intData[BASE] = base_number;
+    if(wait_until_done)
+    {
+      port_toKRL.write(toKRL);
+      port_fromKRL.read(fromKRL);
+      TimeService::ticks timestamp = TimeService::Instance()->getTicks();
+      while(fromKRL.intData[BASE] != base_number)
+      {
+          if(TimeService::Instance()->secondsSince( timestamp ) > RTT::Seconds(5.0))
+          {
+              log(Error) << "\n\n\n Could not set Base "<<base_number<<" , please check teach pendant \n\n" << endlog();
+              return false;
+          }
+          port_fromKRL.read(fromKRL);
+          usleep(500);
+          //log(Info) << "----- Waiting -----" << endlog();
+      }
+      toKRL.intData[BASE] = 0;
+      port_toKRL.write(toKRL);
+    }
+  return true;
 }
-void KRLTool::setTool(int tool_number)
+
+bool KRLTool::setTool(int tool_number)
 {
-  toKRL.intData[TOOL] = tool_number;
-  setBit(toKRL.boolData,SET_TOOL,true);
-  setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
+    if( ! (0 < tool_number && tool_number <= 16) )
+    {
+        log(Error) << "Tool number should be beetween [1:16]" << endlog();
+        return false;
+    }
+
+    bool wait_until_done = true;
+    toKRL.intData[TOOL] = tool_number;
+    //setBit(toKRL.boolData,SET_TOOL,true);
+    //setBit(toKRL.boolData,KRL_LOOP_REQUESTED,true);
+    if(wait_until_done)
+    {
+      port_toKRL.write(toKRL);
+      port_fromKRL.read(fromKRL);
+      TimeService::ticks timestamp = TimeService::Instance()->getTicks();
+      while(fromKRL.intData[TOOL] != tool_number)
+      {
+          if(TimeService::Instance()->secondsSince( timestamp ) > RTT::Seconds(5.0))
+          {
+              log(Error) << "\n\n\n Could not set Tool "<<tool_number<<" , please check teach pendant \n\n" << endlog();
+              return false;
+          }
+          port_fromKRL.read(fromKRL);
+          usleep(500);
+          //log(Info) << "----- Waiting -----" << endlog();
+      }
+      toKRL.intData[TOOL] = 0;
+      port_toKRL.write(toKRL);
+    }
+    return true;
 }
 void KRLTool::setVELPercent(float vel_percent)
 {

@@ -143,11 +143,11 @@ private: void Linear(
 protected:
     void addNoAckNeededVar(int special_case);
     bool isNoAckNeededVar(int test_case);
-    void resetData();
+    bool resetData();
     void cancelMotion();
     void cancelGoals();
-    void setTool(int tool_number);
-    void setBase(int base_number);
+    bool setTool(int tool_number);
+    bool setBase(int base_number);
     void sendSTOP2();
     void unsetSTOP2();
     void setVELPercent(float vel_percent);

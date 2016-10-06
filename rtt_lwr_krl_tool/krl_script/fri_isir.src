@@ -1,5 +1,5 @@
-&ACCESS RVO1
-&REL 4
+&ACCESS RVO
+&REL 5
 &COMMENT ISIR-CNRS 2016
 &PARAM EDITMASK = *
 DEF fri_isir(fri_rate_ms:IN,tool_number:IN,base_number:IN)
@@ -57,16 +57,12 @@ $STIFFNESS.COMMIT=TRUE
 WAIT SEC 0.1
 $TIMER_STOP[1] = FALSE
 
+; You need to acknowledge this first motion command
+; by releasing the run button (green) and pressing again
 PTP $AXIS_ACT
 
 $fri_to_int[8] = fri_rate_ms
 fri_open(fri_rate_ms,true)
-
-;if(init_at_start_pos) then
-;  go_to_start()
-;else
-;  PTP $AXIS_ACT
-;endif
 
 ;;FOLD Publish BASE pose
 $fri_to_rea[1] = $BASE.X
@@ -101,14 +97,6 @@ repeat
 
   if ( $fri_frm_bool[3] ) then
     control_mode_selected = set_new_control_mode($fri_frm_int[2])
-  endif
-
-  if( $fri_frm_bool[4] ) then
-    tool_valid = set_new_tool($fri_frm_int[3])
-  endif
-
-  if( $fri_frm_bool[5] ) then
-    base_valid = set_new_base($fri_frm_int[4])
   endif
 
   if( $fri_frm_bool[6] ) then
@@ -169,10 +157,15 @@ DEF wait_for_loop_request()
     $fri_to_int[1] = 1
   endif
 
-  ;-- Waiting for PC commands --;
   current_pos = $AXIS_ACT
   while $fri_frm_bool[1]==false
-
+    if ($fri_frm_int[3]>=1) then
+      set_new_tool()
+    endif
+    if ($fri_frm_int[4]>=1) then
+      set_new_base()
+    endif
+    ;-- Waiting for PC commands --;
     if($FriState <> #CMD) then
       PTP current_pos
     endif
@@ -256,63 +249,54 @@ deffct bool set_new_control_mode(control_mode:IN)
 
     $MSG_T.VALID = TRUE
 
-    ;PTP CLAMP_AXES($AXIS_ACT)
-    ;fri_start()
-    ;wait sec 0.2
-
   endif
 
   return valid_control_mode
 
 endfct
 
-deffct bool set_new_base(base_number:IN)
+def set_new_base()
 
   INT base_number
-  DECL BOOL valid_base
-  valid_base = false
+  base_number = $fri_frm_int[4]
 
   $MSG_T.KEY[] = "New Base Requested                  "
   $MSG_T.VALID = TRUE
 
-  if( base_number >= 0 ) then
+  if( (0<=base_number) AND (base_number<=16) ) then
     BAS(#BASE,base_number)
-    $STIFFNESS.TOOL = $TOOL
     $STIFFNESS.BASE = $BASE
     $STIFFNESS.COMMIT=TRUE
     $fri_to_int[4] = base_number
-    ;;FOLD Publish BASE pose
+    wait for ($fri_frm_int[4] == 0)
+    $fri_to_int[4] = 0
+    ; Publish BASE pose
     $fri_to_rea[1] = $BASE.X
     $fri_to_rea[2] = $BASE.Y
     $fri_to_rea[3] = $BASE.Z
     $fri_to_rea[4] = $BASE.A
     $fri_to_rea[5] = $BASE.B
     $fri_to_rea[6] = $BASE.C
-    valid_base = true
-    ;;ENDFOLD
   endif
-  return valid_base
-endfct
+end
 
-deffct bool set_new_tool(tool_number:IN)
+def set_new_tool()
 
   INT tool_number
-  DECL BOOL valid_tool
-  valid_tool = false
+  tool_number = $fri_frm_int[3]
 
   $MSG_T.KEY[] = "New Tool Requested                  "
   $MSG_T.VALID = TRUE
 
-  if( tool_number >= 0 ) then
+  if( (0<=tool_number) AND (tool_number<=16) ) then
     BAS(#TOOL,tool_number)
     $STIFFNESS.TOOL = $TOOL
-    $STIFFNESS.BASE = $BASE
     $STIFFNESS.COMMIT=TRUE
     $fri_to_int[3] = tool_number
-    valid_tool = true
+    wait for ($fri_frm_int[3] == 0)
+    $fri_to_int[3] = 0
   endif
-  return valid_tool
-endfct
+end
 
 def wait_for_acknowledgment()
 
@@ -450,6 +434,7 @@ def do_stop2()
   brake
   $msg_t.key[] = "waiting for fri_bool[8] to resume       "
   $msg_t.valid = true
+  ; Wait for rtt_lwr_krl.unsetSTOP2() (deployer or ROSService)
   wait for $fri_frm_bool[8] == false
 
 end
@@ -647,6 +632,9 @@ endfct
 def reset_fri_data()
 
   decl int i
+
+  $MSG_T.KEY[] = "Resetting FRI tabs                  "
+  $MSG_T.VALID = true
 
   for i=1 to 16
     $fri_to_int[i]=0
