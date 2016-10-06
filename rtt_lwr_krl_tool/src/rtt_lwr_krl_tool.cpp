@@ -6,6 +6,7 @@
 namespace lwr{
 using namespace RTT;
 using namespace krl;
+using namespace RTT::os;
 
 KRLTool::KRLTool(const std::string& name):
 TaskContext(name),
@@ -68,6 +69,8 @@ is_joint_torque_control_mode(false)
 
     this->addOperation("resetData",&KRLTool::resetData,this);
 
+    // this->provides("PTP")->addOperation("move")
+
     for(unsigned int i=0;i<FRI_USER_SIZE;i++)
     {
         fromKRL.intData[i] = toKRL.intData[i] =  0;
@@ -83,44 +86,65 @@ is_joint_torque_control_mode(false)
 
 }
 
-void KRLTool::sendFRICommand(int cmd,bool wait_until_done)
+bool KRLTool::sendFRICommand(int cmd,bool wait_until_done)
 {
     toKRL.intData[FRI_CMD] = cmd;
     if(wait_until_done)
     {
         port_toKRL.write(toKRL);
         port_fromKRL.read(fromKRL);
-        while(fromKRL.intData[FRI_CMD] != 1)
+        TimeService::ticks timestamp = TimeService::Instance()->getTicks();
+        while(fromKRL.intData[FRI_CMD] != cmd)
         {
+            if(TimeService::Instance()->secondsSince( timestamp ) > RTT::Seconds(5.0))
+            {
+                log(Error) << "\n\n\n Could not execute FRI Command , please check teach pendant \n\n" << endlog();
+                return false;
+            }
             port_fromKRL.read(fromKRL);
             usleep(500);
             //log(Info) << "----- Waiting -----" << endlog();
         }
         toKRL.intData[FRI_CMD] = 0;
+        port_toKRL.write(toKRL);
     }
+    return true;
 }
 
-void KRLTool::FRIOpen(int period_ms)
+bool KRLTool::FRIOpen(int period_ms)
 {
     if(1 < period_ms && period_ms <= 1000)
         toKRL.intData[FRI_PERIOD_MS] = period_ms;
-    sendFRICommand(FRI_OPEN);
+    return sendFRICommand(FRI_OPEN);
 }
-void KRLTool::FRIStart()
+bool KRLTool::FRIStart()
 {
-    sendFRICommand(FRI_START);
+    return sendFRICommand(FRI_START);
 }
-void KRLTool::FRIStop()
+bool KRLTool::FRIStop()
 {
-    sendFRICommand(FRI_STOP);
+    return sendFRICommand(FRI_STOP);
 }
-void KRLTool::FRIClose()
+bool KRLTool::FRIClose()
 {
-    sendFRICommand(FRI_CLOSE);
+    return sendFRICommand(FRI_CLOSE);
 }
 
 void KRLTool::resetData()
 {
+    toKRL.boolData = 0;
+    for (size_t i = 0; i < FRI_USER_SIZE; i++) {
+        toKRL.intData[i] = toKRL.realData[i] = 0;
+    }
+    toKRL.intData[RESET_ALL_DATA] = 1;
+    port_toKRL.write(toKRL);
+    port_fromKRL.read(fromKRL);
+    while(fromKRL.intData[RESET_ALL_DATA] != 1)
+    {
+        port_fromKRL.read(fromKRL);
+        usleep(500);
+        //log(Info) << "----- Waiting -----" << endlog();
+    }
     toKRL.boolData = 0;
     for (size_t i = 0; i < FRI_USER_SIZE; i++) {
         toKRL.intData[i] = toKRL.realData[i] = 0;

@@ -1,26 +1,29 @@
-&ACCESS RVO
-&REL 3
+&ACCESS RVO1
+&REL 4
 &COMMENT ISIR-CNRS 2016
 &PARAM EDITMASK = *
-DEF fri_isir(fri_rate_ms:IN,tool_number:IN,base_number:IN,start_pos:IN,init_at_start_pos:IN )
+DEF fri_isir(fri_rate_ms:IN,tool_number:IN,base_number:IN)
  
 ; Parameters
 INT fri_rate_ms
 INT tool_number
 INT base_number
-E6AXIS start_pos
-BOOL init_at_start_pos
 
 DECL INT i
 DECL BOOL use_relative
 DECL INT command_input_type
+DECL BOOL control_mode_selected
+DECL BOOL tool_valid
+DECL BOOL base_valid
 
-start_pos_glob = start_pos
+control_mode_selected = false
+tool_valid = false
+base_valid = false
+
 ; Copyright ISIR-CNRS 2016
 ; Author: Antoine Hoarau <hoarau@isir.upmc.fr>
 
 GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
-INTERRUPT ON 3
 BAS (#INITMOV,0 )
 INTERRUPT DECL 4 WHEN $fri_frm_bool[8]==TRUE DO do_stop2()
 INTERRUPT DECL 5 WHEN $fri_frm_bool[9]==TRUE DO set_vel()
@@ -28,6 +31,7 @@ $TIMER_STOP[1] = TRUE
 $TIMER[1] = 0
 INTERRUPT DECL 6 WHEN $fri_frm_int[5]>=1 DO execute_FRI_command()
 INTERRUPT DECL 7 WHEN $fri_frm_bool[2] DO cancel_motion()
+INTERRUPT DECL 8 WHEN $fri_frm_int[9]>=1 DO reset_fri_data()
 INTERRUPT ON
 
 reset_fri_data()
@@ -50,21 +54,19 @@ $STIFFNESS.TOOL = $TOOL
 $STIFFNESS.BASE = $BASE
 $STIFFNESS.COMMIT=TRUE
 
-;Goto Zero Position
-;PTP XHOME C_PTP
-;PTP start_pos C_PTP
-
 WAIT SEC 0.1
 $TIMER_STOP[1] = FALSE
+
+PTP $AXIS_ACT
 
 $fri_to_int[8] = fri_rate_ms
 fri_open(fri_rate_ms,true)
 
-if(init_at_start_pos) then
-  go_to_start()
-else
-  PTP $AXIS_ACT
-endif
+;if(init_at_start_pos) then
+;  go_to_start()
+;else
+;  PTP $AXIS_ACT
+;endif
 
 ;;FOLD Publish BASE pose
 $fri_to_rea[1] = $BASE.X
@@ -97,47 +99,25 @@ repeat
   use_relative = ($fri_frm_int[6] <> 0)
   command_input_type = $fri_frm_int[7]
 
-  ;;ENDFOLD
-
-  ;;FOLD New Control Mode requested
   if ( $fri_frm_bool[3] ) then
-
-    set_new_control_mode()
-
+    control_mode_selected = set_new_control_mode($fri_frm_int[2])
   endif
-  ;;ENDFOLD
 
-  ;;FOLD New tool requested
   if( $fri_frm_bool[4] ) then
-
-    set_new_tool()
-
+    tool_valid = set_new_tool($fri_frm_int[3])
   endif
-  ;;ENDFOLD
 
-  ;;FOLD New base requested
   if( $fri_frm_bool[5] ) then
-
-    set_new_base()
-
+    base_valid = set_new_base($fri_frm_int[4])
   endif
-  ;;ENDFOLD
 
-  ;;FOLD Execute PTP Command
   if( $fri_frm_bool[6] ) then
-
     execute_PTP(use_relative,command_input_type)
-
   endif
-  ;;ENDFOLD
 
-  ;;FOLD Execute LIN Command
   if( $fri_frm_bool[7] ) then
-
     execute_LIN(use_relative,command_input_type)
-
   endif
-  ;;ENDFOLD
 
   ; This wait is necessary otherwise it will execute
   ; the next set of instructions (!!)
@@ -171,16 +151,9 @@ def go_to_zero()
   PTP { a1 0,a2 90,e1 0, a3 0,a4 0,a5 0,a6 0}
 end
 
-def go_to_start()
-  PTP start_pos_glob
-end
-
 DEF wait_for_loop_request()
   DECL INT i
-
-  if($fri_to_bool[2] == true) then
-    INTERRUPT ON 8
-  endif
+  DECL E6AXIS current_pos
 
   for i=1 to 16
     if( is_no_ack_var(i) == false ) then
@@ -197,7 +170,14 @@ DEF wait_for_loop_request()
   endif
 
   ;-- Waiting for PC commands --;
-  wait for $fri_frm_bool[1]
+  current_pos = $AXIS_ACT
+  while $fri_frm_bool[1]==false
+
+    if($FriState <> #CMD) then
+      PTP current_pos
+    endif
+
+  endwhile
 
 END
 
@@ -209,6 +189,11 @@ def fri_open(rate_ms:IN,wait_until_open:IN)
   if(wait_until_open) then
     repeat
       ret = friopen(rate_ms)
+      ; If you get Fix Erroneous dynamic mode
+      ; the tool might be wrong. To change it :
+      ; Configure --> Set tool/base
+      ; and select the appropriate tool
+      ; or/and change it in your script.
       wait sec 0.5
     until $FriState == #MON
   else
@@ -222,8 +207,8 @@ def fri_start()
 end
 
 def fri_stop()
-  DECL FRISTATE ret
-  ret = fristop()
+  DECL FRISTATE fri_ret
+  fri_ret = fristop()
 end
 
 def fri_close()
@@ -231,34 +216,39 @@ def fri_close()
   ret = friclose()
 end
 
-def set_new_control_mode()
+deffct bool set_new_control_mode(control_mode:IN)
 
+  INT control_mode
   DECL FRISTATE ret
+  DECL BOOL valid_control_mode
+  valid_control_mode = false
 
   $MSG_T.KEY[] = "New Control Mode Requested          "
   $MSG_T.VALID = TRUE
 
   ; TODO : add a mode 40 Joint torque
-  if ( ($fri_frm_int[2] == 10) OR ($fri_frm_int[2] == 20) OR ($fri_frm_int[2] == 30) ) then
+  if ( (control_mode == 10) OR (control_mode == 20) OR (control_mode == 30) ) then
 
     ret=fristop()
     wait for ($fristate==#MON)
 
-    ;Set new Strategy
-    $STIFFNESS.STRATEGY = $fri_frm_int[2]
+    $STIFFNESS.STRATEGY = control_mode
     $STIFFNESS.COMMIT = TRUE
 
-    ;;FOLD Screen output
     switch $stiffness.strategy
     case 10
       $MSG_T.KEY[] = "Joint Position Control Mode"
+      valid_control_mode = true
     case 20
       $MSG_T.KEY[] = "Cartesian Impedance Control Mode"
+      valid_control_mode = true
     case 30
       if (is_zero_stiffness($STIFFNESS) == TRUE) then
         $MSG_T.KEY[] = "Joint Torque Control Mode"
+        valid_control_mode = true
       else
         $MSG_T.KEY[] = "Joint Impedance Control Mode"
+        valid_control_mode = true
       endif
     default
       $MSG_T.KEY[] = "ERROR: Wrong Control Strategy"
@@ -266,27 +256,31 @@ def set_new_control_mode()
 
     $MSG_T.VALID = TRUE
 
-    ;;ENDFOLD (Screen output)
-
-    PTP CLAMP_AXES($AXIS_ACT)
-    fri_start()
-    wait sec 0.2
+    ;PTP CLAMP_AXES($AXIS_ACT)
+    ;fri_start()
+    ;wait sec 0.2
 
   endif
 
-end
+  return valid_control_mode
 
-def set_new_base()
+endfct
+
+deffct bool set_new_base(base_number:IN)
+
+  INT base_number
+  DECL BOOL valid_base
+  valid_base = false
 
   $MSG_T.KEY[] = "New Base Requested                  "
   $MSG_T.VALID = TRUE
 
-  if( $fri_frm_int[4] >= 0 ) then
-    BAS(#BASE,$fri_frm_int[4])
+  if( base_number >= 0 ) then
+    BAS(#BASE,base_number)
     $STIFFNESS.TOOL = $TOOL
     $STIFFNESS.BASE = $BASE
     $STIFFNESS.COMMIT=TRUE
-    $fri_to_int[4] = $fri_frm_int[4]
+    $fri_to_int[4] = base_number
     ;;FOLD Publish BASE pose
     $fri_to_rea[1] = $BASE.X
     $fri_to_rea[2] = $BASE.Y
@@ -294,25 +288,31 @@ def set_new_base()
     $fri_to_rea[4] = $BASE.A
     $fri_to_rea[5] = $BASE.B
     $fri_to_rea[6] = $BASE.C
+    valid_base = true
     ;;ENDFOLD
   endif
+  return valid_base
+endfct
 
-end
+deffct bool set_new_tool(tool_number:IN)
 
-def set_new_tool()
+  INT tool_number
+  DECL BOOL valid_tool
+  valid_tool = false
 
   $MSG_T.KEY[] = "New Tool Requested                  "
   $MSG_T.VALID = TRUE
 
-  if( $fri_frm_int[3] >= 0 ) then
-    BAS(#TOOL,$fri_frm_int[3])
+  if( tool_number >= 0 ) then
+    BAS(#TOOL,tool_number)
     $STIFFNESS.TOOL = $TOOL
     $STIFFNESS.BASE = $BASE
     $STIFFNESS.COMMIT=TRUE
-    $fri_to_int[3] = $fri_frm_int[3]
+    $fri_to_int[3] = tool_number
+    valid_tool = true
   endif
-
-end
+  return valid_tool
+endfct
 
 def wait_for_acknowledgment()
 
@@ -654,6 +654,10 @@ def reset_fri_data()
     $fri_to_bool[i]=false
   endfor
 
+  $fri_to_int[9] = 1
+  wait for $fri_frm_int[9]==0
+  $fri_to_int[9] = 0
+
 END
 
 deffct bool is_no_ack_var(i:in)
@@ -702,7 +706,7 @@ def execute_FRI_command()
   case 4
     fri_close()
   endswitch
-  $fri_to_int[5] = 1
+  $fri_to_int[5] = $fri_frm_int[5]
   wait for ($fri_frm_int[5] == 0)
   $fri_to_int[5] = 0
 

@@ -10,6 +10,7 @@
 #include <rtt/Component.hpp>
 #include <rtt/os/TimeService.hpp>
 #include <rtt/Logger.hpp>
+#include <rtt/Time.hpp>
 
 #include <rtt_roscomm/rtt_rostopic.h>
 #include <rtt_rosparam/rosparam.h>
@@ -82,10 +83,10 @@ public:
     bool configureHook();
     bool startHook();
     void stopHook();
-    void FRIOpen(int period_ms = 1 /*ms*/);
-    void FRIStart();
-    void FRIStop();
-    void FRIClose();
+    bool FRIOpen(int period_ms = 1 /*ms*/);
+    bool FRIStart();
+    bool FRIStop();
+    bool FRIClose();
 
 // Actionlib Callbacks
 protected:
@@ -116,7 +117,7 @@ protected:
     void printInt();
     void printReal();
     void printAll();
-    void sendFRICommand(int cmd,bool wait_until_done = true);
+    bool sendFRICommand(int cmd,bool wait_until_done = true);
 
 private: void PointToPoint(
     const std::vector<double>& ptp,

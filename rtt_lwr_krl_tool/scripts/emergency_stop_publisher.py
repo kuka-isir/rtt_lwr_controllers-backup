@@ -14,7 +14,7 @@ from krl_msgs.srv import SetMaxVelPercent
 
 rospy.init_node("safety_stop")
 
-stop_zone = 0.4 # 1.4m
+stop_zone = 0.8 # 1.4m
 hysteresis = 0.2
 
 
