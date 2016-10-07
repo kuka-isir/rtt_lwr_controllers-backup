@@ -345,6 +345,7 @@ void KRLTool::Linear(
     {
         do{
             this->trigger();
+            usleep(250);
         }while(this->has_cmd);
     }
 }
@@ -647,6 +648,7 @@ void KRLTool::PointToPoint(
     {
         do{
             this->trigger();
+            usleep(250);
         }while(this->has_cmd);
     }
 }
