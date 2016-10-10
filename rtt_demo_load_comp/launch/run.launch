@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<launch>
+    <!--============ LWR Runner script Params ========-->
+
+    <rosparam ns="ft_sensor" subst_value="true">
+        ip: 192.168.100.103
+        calibration_index: -1 # -1 for current
+        frame: ati_link
+    </rosparam>
+    <!-- The end effector frame (you'll be able to use frames <= tip_link for cartesian position, jacobians etc.) -->
+    <arg name="tip_link" default="ati_link"/>
+    <!-- Run Simulated robot (need to 'roslaunch rtt_lwr_gazebo lwr_gazebo.launch' first) -->
+    <arg name="sim" default="false" />
+    <!-- Run in GDB -->
+    <arg name="debug" default="false" />
+    <!-- Launch rviz -->
+    <arg name="rviz" default="true" />
+    <!-- The level of verbose (never, fatal, critical, error, warning, info, debug, realtime) -->
+    <arg name="log_level" default="info" />
+
+    <arg if="$(arg sim)"     name="robot_name" default="lwr_sim"/>
+    <arg unless="$(arg sim)" name="robot_name" default="lwr"/>
+
+    <arg if="$(arg sim)"     name="robot_ns" default="/" />
+    <arg unless="$(arg sim)" name="robot_ns" default="/" />
+
+    <!-- Tools -->
+    <arg name="load_base" default="true" />
+    <arg name="load_table" default="true" />
+    <arg name="load_ati_sensor" default="true" />
+    <arg name="load_calib_tool" default="false" />
+    <arg name="load_handle" default="true" />
+    <arg name="start_paused" default="false"/>
+    <!-- Gazebo -->
+    <arg name="gazebo_gui" default="false"/>
+
+    <!-- The parameters that the JT Controller sensor will get -->
+    <rosparam ns="load_comp_demo" subst_value="true">
+        add_damping: true
+        compensate_coriolis: false
+        use_ft_sensor: false
+        ft_sensor_link: ati_link
+        damping: [1,1,1,1,0,1,0]
+    </rosparam>
+    <!--============ LWR Runner script ===============-->
+
+    <include file="$(find lwr_utils)/launch/run.launch">
+        <arg name="sim" value="$(arg sim)" />
+        <!-- Default ops script location for real robot -->
+        <arg name="ops_script" value="$(find rtt_demo_load_comp)/scripts/run.ops"/>
+        <arg name="robot_ns" value="$(arg robot_ns)"/>
+        <arg name="robot_name" value="$(arg robot_name)"/>
+        <arg name="debug" value="$(arg debug)" />
+        <arg name="rviz" value="$(arg rviz)" />
+        <arg name="log_level" value="$(arg log_level)" />
+        <arg name="tip_link" value="$(arg tip_link)"/>
+        <arg name="load_base" value="$(arg load_base)" />
+        <arg name="load_table" value="$(arg load_table)" />
+        <arg name="load_ati_sensor" value="$(arg load_ati_sensor)" />
+        <arg name="load_calib_tool" value="$(arg load_calib_tool)" />
+        <arg name="load_handle" value="$(arg load_handle)" />
+        <arg name="gazebo_gui" value="$(arg gazebo_gui)"/>
+    </include>
+
+</launch>

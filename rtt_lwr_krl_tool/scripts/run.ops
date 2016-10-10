@@ -2,4 +2,4 @@ import("rtt_rospack")
 runScript(ros.find("lwr_utils")+"/scripts/utils.ops")
 
 loadRobot(getRobotName(),isSim(),true)
-loadKRLTool(true)
+loadStatePublisher(true)

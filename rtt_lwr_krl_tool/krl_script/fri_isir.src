@@ -1,0 +1,701 @@
+&ACCESS RVO
+&REL 5
+&COMMENT ISIR-CNRS 2016
+&PARAM EDITMASK = *
+DEF fri_isir(fri_rate_ms:IN,tool_number:IN,base_number:IN)
+ 
+; Parameters
+INT fri_rate_ms
+INT tool_number
+INT base_number
+
+DECL INT i
+DECL BOOL use_relative
+DECL INT command_input_type
+DECL BOOL control_mode_selected
+DECL BOOL tool_valid
+DECL BOOL base_valid
+
+control_mode_selected = false
+tool_valid = false
+base_valid = false
+
+; Copyright ISIR-CNRS 2016
+; Author: Antoine Hoarau <hoarau@isir.upmc.fr>
+
+GLOBAL INTERRUPT DECL 3 WHEN $STOPMESS==TRUE DO IR_STOPM()
+BAS (#INITMOV,0 )
+INTERRUPT DECL 4 WHEN $fri_frm_bool[8]==TRUE DO do_stop2()
+INTERRUPT DECL 5 WHEN $fri_frm_bool[9]==TRUE DO set_vel()
+$TIMER_STOP[1] = TRUE
+$TIMER[1] = 0
+INTERRUPT DECL 6 WHEN $fri_frm_int[5]>=1 DO execute_FRI_command()
+INTERRUPT DECL 7 WHEN $fri_frm_bool[2] DO cancel_motion()
+INTERRUPT DECL 8 WHEN $fri_frm_int[9]>=1 DO reset_fri_data()
+INTERRUPT ON
+
+reset_fri_data()
+
+if ($FriState <> #OFF) then
+  fri_stop()
+  fri_close()
+endif
+
+$fri_to_int[1] = 0
+$fri_to_int[2] = 10
+$fri_to_int[3] = tool_number
+$fri_to_int[4] = base_number
+
+reset_robot_stiffness()
+
+BAS(#TOOL,tool_number)
+BAS(#BASE,base_number)
+$STIFFNESS.TOOL = $TOOL
+$STIFFNESS.BASE = $BASE
+$STIFFNESS.COMMIT=TRUE
+
+WAIT SEC 0.1
+$TIMER_STOP[1] = FALSE
+
+; You need to acknowledge this first motion command
+; by releasing the run button (green) and pressing again
+PTP $AXIS_ACT
+
+$fri_to_int[8] = fri_rate_ms
+fri_open(fri_rate_ms,true)
+
+;;FOLD Publish BASE pose
+$fri_to_rea[1] = $BASE.X
+$fri_to_rea[2] = $BASE.Y
+$fri_to_rea[3] = $BASE.Z
+$fri_to_rea[4] = $BASE.A
+$fri_to_rea[5] = $BASE.B
+$fri_to_rea[6] = $BASE.C
+;;ENDFOLD
+
+repeat
+
+  ;;FOLD Wait for KRL_LOOP_REQUESTED
+  ; Reset Advance run pointer (dafuq ?!)
+  $ADVANCE = 3
+  INTERRUPT ON
+
+  ; If We are in stuck on RESUME, wait for PC
+  ; to send ack for this
+  ; $fri_to_bool[2] = true set by interrupt
+  ; $fri_frm_bool[2] = true set by PC to ack
+
+  if($fri_frm_bool[2]==false AND $fri_to_bool[2]) then
+    continue
+    $fri_to_bool[2] = false
+  endif
+
+  wait_for_loop_request()
+
+  use_relative = ($fri_frm_int[6] <> 0)
+  command_input_type = $fri_frm_int[7]
+
+  if ( $fri_frm_bool[3] ) then
+    control_mode_selected = set_new_control_mode($fri_frm_int[2])
+  endif
+
+  if( $fri_frm_bool[6] ) then
+    execute_PTP(use_relative,command_input_type)
+  endif
+
+  if( $fri_frm_bool[7] ) then
+    execute_LIN(use_relative,command_input_type)
+  endif
+
+  ; This wait is necessary otherwise it will execute
+  ; the next set of instructions (!!)
+  WAIT SEC 0
+
+  ; Acknowledge all flags (set them to 1)
+  for i=1 to 16
+    if( is_no_ack_var(i) == false ) then
+      $fri_to_bool[i]=$fri_frm_bool[i]
+    endif
+  endfor
+
+  ; Send response
+  WAIT SEC 0
+
+  ; Wait for confirmation (all flags back to 0)
+  for i=1 to 16
+    if( is_no_ack_var(i) == false ) then
+      wait for ($fri_frm_bool[i] == false)
+    endif
+  endfor
+
+  WAIT SEC 0
+
+until ($fri_frm_int[1] == 3)
+
+END
+;;ENDFOLD
+
+def go_to_zero()
+  PTP { a1 0,a2 90,e1 0, a3 0,a4 0,a5 0,a6 0}
+end
+
+DEF wait_for_loop_request()
+  DECL INT i
+  DECL E6AXIS current_pos
+
+  for i=1 to 16
+    if( is_no_ack_var(i) == false ) then
+      $fri_to_bool[i]=false
+    endif
+  endfor
+
+  if($FriState==#CMD) then
+    $fri_to_int[1] = 2
+  endif
+
+  if($FriState==#MON) then
+    $fri_to_int[1] = 1
+  endif
+
+  current_pos = $AXIS_ACT
+  while $fri_frm_bool[1]==false
+    if ($fri_frm_int[3]>=1) then
+      set_new_tool()
+    endif
+    if ($fri_frm_int[4]>=1) then
+      set_new_base()
+    endif
+    ;-- Waiting for PC commands --;
+    if($FriState <> #CMD) then
+      PTP current_pos
+    endif
+
+  endwhile
+
+END
+
+def fri_open(rate_ms:IN,wait_until_open:IN)
+  DECL FRISTATE ret
+  REAL rate_ms
+  bool wait_until_open
+
+  if(wait_until_open) then
+    repeat
+      ret = friopen(rate_ms)
+      ; If you get Fix Erroneous dynamic mode
+      ; the tool might be wrong. To change it :
+      ; Configure --> Set tool/base
+      ; and select the appropriate tool
+      ; or/and change it in your script.
+      wait sec 0.5
+    until $FriState == #MON
+  else
+    ret = friopen(rate_ms)
+  endif
+end
+
+def fri_start()
+  DECL FRISTATE ret
+  ret = fristart(1.0)
+end
+
+def fri_stop()
+  DECL FRISTATE fri_ret
+  fri_ret = fristop()
+end
+
+def fri_close()
+  DECL FRISTATE ret
+  ret = friclose()
+end
+
+deffct bool set_new_control_mode(control_mode:IN)
+
+  INT control_mode
+  DECL FRISTATE ret
+  DECL BOOL valid_control_mode
+  valid_control_mode = false
+
+  $MSG_T.KEY[] = "New Control Mode Requested          "
+  $MSG_T.VALID = TRUE
+
+  ; TODO : add a mode 40 Joint torque
+  if ( (control_mode == 10) OR (control_mode == 20) OR (control_mode == 30) ) then
+
+    ret=fristop()
+    wait for ($fristate==#MON)
+
+    $STIFFNESS.STRATEGY = control_mode
+    $STIFFNESS.COMMIT = TRUE
+
+    switch $stiffness.strategy
+    case 10
+      $MSG_T.KEY[] = "Joint Position Control Mode"
+      valid_control_mode = true
+    case 20
+      $MSG_T.KEY[] = "Cartesian Impedance Control Mode"
+      valid_control_mode = true
+    case 30
+      if (is_zero_stiffness($STIFFNESS) == TRUE) then
+        $MSG_T.KEY[] = "Joint Torque Control Mode"
+        valid_control_mode = true
+      else
+        $MSG_T.KEY[] = "Joint Impedance Control Mode"
+        valid_control_mode = true
+      endif
+    default
+      $MSG_T.KEY[] = "ERROR: Wrong Control Strategy"
+    endswitch
+
+    $MSG_T.VALID = TRUE
+
+  endif
+
+  return valid_control_mode
+
+endfct
+
+def set_new_base()
+
+  INT base_number
+  base_number = $fri_frm_int[4]
+
+  $MSG_T.KEY[] = "New Base Requested                  "
+  $MSG_T.VALID = TRUE
+
+  if( (0<=base_number) AND (base_number<=16) ) then
+    BAS(#BASE,base_number)
+    $STIFFNESS.BASE = $BASE
+    $STIFFNESS.COMMIT=TRUE
+    $fri_to_int[4] = base_number
+    wait for ($fri_frm_int[4] == 0)
+    $fri_to_int[4] = 0
+    ; Publish BASE pose
+    $fri_to_rea[1] = $BASE.X
+    $fri_to_rea[2] = $BASE.Y
+    $fri_to_rea[3] = $BASE.Z
+    $fri_to_rea[4] = $BASE.A
+    $fri_to_rea[5] = $BASE.B
+    $fri_to_rea[6] = $BASE.C
+  endif
+end
+
+def set_new_tool()
+
+  INT tool_number
+  tool_number = $fri_frm_int[3]
+
+  $MSG_T.KEY[] = "New Tool Requested                  "
+  $MSG_T.VALID = TRUE
+
+  if( (0<=tool_number) AND (tool_number<=16) ) then
+    BAS(#TOOL,tool_number)
+    $STIFFNESS.TOOL = $TOOL
+    $STIFFNESS.COMMIT=TRUE
+    $fri_to_int[3] = tool_number
+    wait for ($fri_frm_int[3] == 0)
+    $fri_to_int[3] = 0
+  endif
+end
+
+def wait_for_acknowledgment()
+
+  decl int i
+  ; This wait is necessary otherwise it will execute
+  ; the next set of instructions (!!)
+  WAIT SEC 0
+
+  ; Acknowledge all flags (set them to 1)
+  for i=1 to 16
+    if( is_no_ack_var(i) == false ) then
+      $fri_to_bool[i]=$fri_frm_bool[i]
+    endif
+  endfor
+
+  ; Send response
+  WAIT SEC 0
+
+  ; Wait for confirmation (all flags back to 0)
+  for i=1 to 16
+    if( is_no_ack_var(i) == false ) then
+      wait for ($fri_frm_bool[i] == false)
+    endif
+  endfor
+
+  WAIT SEC 0
+end
+
+DEFFCT BOOL is_zero_stiffness(s:IN)
+  DECL STIFFNESS s
+  if( (s.axisstiffness.a1 == 0) AND (s.axisstiffness.a2 == 0) AND (s.axisstiffness.e1 == 0) AND (s.axisstiffness.a3 == 0) AND (s.axisstiffness.a4 == 0) AND (s.axisstiffness.a5 == 0) AND (s.axisstiffness.a6 == 0)) then
+    return true
+  endif
+  return false
+ENDFCT
+
+DEFFCT E6AXIS BuildJntCmdFromFRI(use_relative:IN)
+  DECL E6AXIS JOINT_OUT
+  BOOL use_relative
+
+  if ( (0 < $fri_frm_rea[7]) AND ($fri_frm_rea[7] <= 100.0 ) ) then
+
+    BAS(#ACC_PTP , $fri_frm_rea[7] )
+    BAS(#VEL_PTP , $fri_frm_rea[7] )
+
+  endif
+
+  if(use_relative) then
+    JOINT_OUT = {A1 0.0, A2 0.0, E1 0.0, A3 0.0, A4 0.0, A5 0.0, A6 0.0}
+  else
+    JOINT_OUT = CLAMP_AXES($AXIS_ACT)
+  endif
+
+  if( $fri_frm_bool[10] ) then
+    JOINT_OUT.A1 = $fri_frm_rea[10]
+  endif
+
+  if( $fri_frm_bool[11] ) then
+    JOINT_OUT.A2 = $fri_frm_rea[11]
+  endif
+
+  if( $fri_frm_bool[12] ) then
+    JOINT_OUT.E1 = $fri_frm_rea[12]
+  endif
+
+  if( $fri_frm_bool[13] ) then
+    JOINT_OUT.A3 = $fri_frm_rea[13]
+  endif
+
+  if( $fri_frm_bool[14] ) then
+    JOINT_OUT.A4 = $fri_frm_rea[14]
+  endif
+
+  if( $fri_frm_bool[15] ) then
+    JOINT_OUT.A5 = $fri_frm_rea[15]
+  endif
+
+  if( $fri_frm_bool[16] ) then
+    JOINT_OUT.A6 = $fri_frm_rea[16]
+  endif
+
+  return CLAMP_AXES(JOINT_OUT)
+ENDFCT
+
+DEFFCT E6POS BuildCartCmdFromFRI(use_relative:IN)
+  DECL E6POS CART_OUT
+  BOOL use_relative
+
+  CART_OUT = $POS_ACT
+
+  if ( (0 < $fri_frm_rea[7]) AND ($fri_frm_rea[7] <= 100.0 ) ) then
+
+    ;$VEL.CP = $fri_frm_rea[7] * 2.0 / 100.0;
+    BAS(#VEL_CP, $fri_frm_rea[7] * 2.0 / 100.0 )
+    BAS(#ACC_CP, $fri_frm_rea[7] )
+
+  endif
+
+  if(use_relative) then
+    CART_OUT = {x 0.0, y 0.0, z 0.0, a 0.0, b 0.0, c 0.0}
+  endif
+
+  if( $fri_frm_bool[10] ) then
+    CART_OUT.X = $fri_frm_rea[1]
+  endif
+
+  if( $fri_frm_bool[11] ) then
+    CART_OUT.Y = $fri_frm_rea[2]
+  endif
+
+  if( $fri_frm_bool[12] ) then
+    CART_OUT.Z = $fri_frm_rea[3]
+  endif
+
+  if( $fri_frm_bool[13] ) then
+    CART_OUT.A = $fri_frm_rea[4]
+  endif
+
+  if( $fri_frm_bool[14] ) then
+    CART_OUT.B = $fri_frm_rea[5]
+  endif
+
+  if( $fri_frm_bool[15] ) then
+    CART_OUT.C = $fri_frm_rea[6]
+  endif
+
+  return CART_OUT
+ENDFCT
+
+def do_stop2()
+
+  $fri_to_bool[8] = true
+  $msg_t.key[] = "stop2 requested                         "
+  $msg_t.valid = true
+  brake
+  $msg_t.key[] = "waiting for fri_bool[8] to resume       "
+  $msg_t.valid = true
+  ; Wait for rtt_lwr_krl.unsetSTOP2() (deployer or ROSService)
+  wait for $fri_frm_bool[8] == false
+
+end
+
+def set_vel()
+
+  if( ($fri_frm_rea[9] >= 0) or ($fri_frm_rea[9] <= 100)) then
+
+    $OV_PRO = $fri_frm_rea[9]
+    ;$MSG_T.KEY[] = "Setting new velocity                  "
+    ;$MSG_T.VALID = true
+    $fri_to_bool[9] = true
+    wait for ($fri_frm_bool[9] == false)
+    $fri_to_bool[9] = false
+  else
+    $MSG_T.KEY[] = "Bad velocity provided                "
+    $MSG_T.VALID = true
+  endif
+
+end
+
+deffct real calc_compl(start_v:in,end_v:in,current_v:in)
+
+  real start_v
+  real end_v
+  real current_v
+  decl real tmp
+  decl real d
+
+  d = end_v - start_v
+
+  if(d == 0.0) then
+    return 1.0
+  endif
+
+  if(d < 0.0) then
+    start_v = abs(start_v)
+    end_v = abs(end_v)
+    current_v = abs(current_v)
+  endif
+
+  return (current_v - start_v ) / (end_v - start_v)
+endfct
+
+def execute_PTP(use_relative:IN,command_input_type:IN)
+
+  bool use_relative
+  int command_input_type
+
+  if( use_relative ) then
+    $MSG_T.KEY[] = "New PTP_REL Command               "
+  else
+    $MSG_T.KEY[] = "New PTP Command                   "
+  endif
+
+  $MSG_T.VALID = TRUE
+
+  switch command_input_type
+  case 0
+
+    if(use_relative) then
+      PTP_REL BuildJntCmdFromFRI(true)
+      $ADVANCE = 0
+    else
+      PTP BuildJntCmdFromFRI(false)
+      $ADVANCE = 0
+    endif
+
+  case 1
+
+    if(use_relative) then
+      PTP_REL BuildCartCmdFromFRI(true)
+      $ADVANCE = 0
+    else
+      PTP BuildCartCmdFromFRI(false)
+      $ADVANCE = 0
+    endif
+
+  endswitch
+
+end
+
+def execute_LIN(use_relative:IN,command_input_type:IN)
+
+  bool use_relative
+  int command_input_type
+
+  if( use_relative ) then
+    $MSG_T.KEY[] = "New LIN_REL Command               "
+  else
+    $MSG_T.KEY[] = "New LIN Command                   "
+  endif
+
+  $MSG_T.VALID = TRUE
+
+  switch command_input_type
+  case 1
+
+    if(use_relative) then
+      LIN_REL BuildCartCmdFromFRI(true)
+      $ADVANCE = 0
+    else
+      LIN BuildCartCmdFromFRI(false)
+      $ADVANCE = 0
+    endif
+
+  case 2
+
+    if(use_relative) then
+      LIN_REL BuildCartCmdFromFRI(true) #TOOL
+      $ADVANCE = 0
+    endif
+
+    endswitch
+end
+
+def cancel_motion()
+
+  brake
+  $MSG_T.KEY[] = "Cancelling Motion                  "
+  $MSG_T.VALID = true
+  $fri_to_bool[2] = true
+  wait sec 0
+  resume
+
+end
+
+DEF reset_robot_stiffness( )
+
+ ;Control Strategy
+ $STIFFNESS.STRATEGY = 10
+
+ ;Frame for Cartesian Stiffness mode #TOOL or #BASE
+ $STIFFNESS.FRAMETYPE = #BASE
+
+ ;Cartesian Spring Stiffness XYZ [0.01, 5000] N/m ABC [0.01, 300] Nm/rad
+ $STIFFNESS.CPSTIFFNESS = {X 2000, Y 2000, Z 2000, A 200, B 200, C 200}
+
+ ;Cartesian Spring Damping [0.1, 1.0] N*s/m
+ $STIFFNESS.CPDAMPING = {X 0.7, Y 0.7, Z 0.7, A 0.7, B 0.7, C 0.7}
+
+ ;Axis specific spring stiffness [0.01, 2000] Nm/rad
+ $STIFFNESS.AXISSTIFFNESS = {A1 1000.0, A2 1000.0, A3 1000.0, A4 1000.0, A5 1000.0, A6 1000.0, E1 1000.0}
+
+ ;Axis specific spring damping [0.1, 1.0] Nm*s/rad
+ $STIFFNESS.AXISDAMPING = {A1 0.7, A2 0.7, A3 0.7, A4 0.7, A5 0.7, A6 0.7, E1 0.7}
+
+ ;Limitation of the cartesian deviation from path [0.1, 100] mm
+ $STIFFNESS.CPMAXDELTA = {X 100, Y 100, Z 100, A 10, B 10, C 10}
+
+ ;Limitation of the Cartesian force at the Tool Center Point Recommanded max: 150N
+ $STIFFNESS.MAXFORCE = {X 150.0, Y 150.0, Z 150.0, A 20.0, B 20.0, C 20.0}
+
+ ;Limitation of the axis specific deviation in degree
+ $STIFFNESS.AXISMAXDELTA = {A1 90.0, A2 90.0, A3 90.0, A4 90.0, A5 90.0, A6 90.0, E1 90.0}
+
+ ;Limitation of the axis specific max torque
+ $STIFFNESS.AXISMAXDELTATRQ = {A1 20.0, A2 20.0, A3 20.0, A4 20.0, A5 20.0, A6 20.0, E1 20.0}
+
+ ; Send/commit new values
+ $STIFFNESS.COMMIT=TRUE
+
+END
+
+deffct e6axis touch_axis(ax:in)
+ e6axis ax
+ decl e6axis an
+
+ an = clamp_axes(ax)
+  if an.a6 <0 then
+   an.a6 = an.a6 + 0.01
+  else
+   an.a6 = an.a6 - 0.01
+  endif
+ return an
+endfct
+
+deffct e6axis clamp_axes(ax:in)
+ e6axis ax
+
+ decl e6axis an
+
+ an.a1 = clamp(ax.a1, -169., 169.)
+ an.a2 = clamp(ax.a2,  -29., 209.)
+
+ an.e1 = clamp(ax.e1, -169., 169.)
+ an.a3 = clamp(ax.a3, -119., 119.)
+ an.a4 = clamp(ax.a4, -169., 169.)
+ an.a5 = clamp(ax.a5, -119., 119.)
+ an.a6 = clamp(ax.a6, -169., 169.)
+
+ return an
+endfct
+
+def reset_fri_data()
+
+  decl int i
+
+  $MSG_T.KEY[] = "Resetting FRI tabs                  "
+  $MSG_T.VALID = true
+
+  for i=1 to 16
+    $fri_to_int[i]=0
+    $fri_to_rea[i]=0.0
+    $fri_to_bool[i]=false
+  endfor
+
+  $fri_to_int[9] = 1
+  wait for $fri_frm_int[9]==0
+  $fri_to_int[9] = 0
+
+END
+
+deffct bool is_no_ack_var(i:in)
+
+  int i
+
+  if( (i == 9) or (i == 8) or (i == 2) ) then
+    return true
+  else
+    return false
+  endif
+
+endfct
+
+deffct real clamp(v:in, minval:in, maxval:in)
+
+  real v, minval, maxval
+  decl real r
+
+  r = v
+
+  if v > maxval then
+  r = maxval
+  endif
+
+  if v < minval then
+  r = minval
+  endif
+
+  return r
+endfct
+
+def execute_FRI_command()
+
+  switch $fri_frm_int[5]
+  case 1
+    if( (1 <= $fri_frm_int[8]) AND ($fri_frm_int[8] <= 1000)) then
+      fri_open($fri_frm_int[8],true)
+    else
+      fri_open($fri_to_int[8],true)
+    endif
+  case 2
+    fri_start()
+  case 3
+    fri_stop()
+  case 4
+    fri_close()
+  endswitch
+  $fri_to_int[5] = $fri_frm_int[5]
+  wait for ($fri_frm_int[5] == 0)
+  $fri_to_int[5] = 0
+
+end

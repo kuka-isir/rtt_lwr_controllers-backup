@@ -1,0 +1,22 @@
+&ACCESS RVP
+&REL 1
+&PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
+&PARAM EDITMASK = *
+DEF run_fri_isir_default( )
+
+; User Parameters
+
+fri_rate_ms = 1
+tool_number = 5
+base_number = 0
+
+; Go To Zero ;
+;PTP HOME
+; Go To start Pos ;
+;PTP {a1 90,a2 90,a3 -90,a4 0,a5 90,a6 0,e1 0}
+
+;FOLD FRI ISIR Control ()
+fri_isir(fri_rate_ms,tool_number,base_number)
+;ENDFOLD
+
+END
