@@ -1,9 +1,6 @@
 sudo: required
 dist: trusty
 language: generic
-compiler:
-  - gcc
-  - clang
 
 env:
   matrix:
@@ -16,6 +13,6 @@ env:
 
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
- script:
+script:
   - source .ci_config/travis.sh
 
