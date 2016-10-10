@@ -21,6 +21,7 @@ namespace lwr{
 using namespace RTT;
 using namespace krl;
 using namespace RTT::os;
+using namespace std;
 
 KRLTool::KRLTool(const std::string& name):
 TaskContext(name),
