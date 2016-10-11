@@ -905,7 +905,6 @@ void KRLTool::LIN_RPY(
 void KRLTool::updateHook()
 {
     static bool first_loop = true;
-    static fri_uint16_t to_krl_bool_data = 0;
 
     if(!first_loop)
         port_fromKRL.read(fromKRL);
@@ -931,7 +930,6 @@ void KRLTool::updateHook()
     // To KRL
     if(!has_cmd && getBit(toKRL.boolData,KRL_LOOP_REQUESTED))
     {
-        to_krl_bool_data = toKRL.boolData;
         has_cmd = true;
         //printAll();
     }
@@ -942,11 +940,11 @@ void KRLTool::updateHook()
         if(getBit(fromKRL.boolData,KRL_LOOP_REQUESTED))
         {
 
-            bool ack_ptp = getBit(to_krl_bool_data,PTP_CMD)
+            bool ack_ptp = getBit(toKRL.boolData,PTP_CMD)
                 && ptp_current_gh.isValid()
                 && ptp_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE;
 
-            bool ack_lin = getBit(to_krl_bool_data,LIN_CMD)
+            bool ack_lin = getBit(toKRL.boolData,LIN_CMD)
                 && lin_current_gh.isValid()
                 && lin_current_gh.getGoalStatus().status == actionlib_msgs::GoalStatus::ACTIVE;
 
@@ -973,7 +971,7 @@ void KRLTool::updateHook()
             }
 
 
-            to_krl_bool_data = 0;
+            toKRL.boolData = 0;
             has_cmd = false;
 
             // log(Info) << "----- ACKED   -----" << endlog();
@@ -1012,7 +1010,6 @@ void KRLTool::updateHook()
     else
     {
         resetBoolToKRL();
-        to_krl_bool_data = 0;
         has_cmd = false;
     }
 
