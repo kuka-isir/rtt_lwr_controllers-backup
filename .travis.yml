@@ -3,10 +3,13 @@ dist: trusty
 language: generic
 
 env:
+  global:
+    - UPSTREAM_WORKSPACE=https://raw.githubusercontent.com/kuka-isir/rtt_lwr_controllers/master/.travis.yml
+    - ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
   matrix:
-    - NOT_TEST_BUILD=true USE_DEB=true  UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=rtt_lwr_controllers.rosinstall ROS_DISTRO="indigo"    ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - NOT_TEST_BUILD=true USE_DEB=true  UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=rtt_lwr_controllers.rosinstall ROS_DISTRO="jade"      ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - NOT_TEST_BUILD=true USE_DEB=true  UPSTREAM_WORKSPACE=file  ROSINSTALL_FILENAME=rtt_lwr_controllers.rosinstall ROS_DISTRO="kinetic"   ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
+    - ROS_DISTRO="indigo"
+    - ROS_DISTRO="jade"
+    - ROS_DISTRO="kinetic"
 
 install:
   - git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
