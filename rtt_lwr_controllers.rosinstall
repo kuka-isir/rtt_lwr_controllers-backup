@@ -14,9 +14,6 @@
     local-name: lwr_project_creator
     uri: https://github.com/kuka-isir/lwr_project_creator
 - git:
-    local-name: ros_controllers
-    uri: https://github.com/ros-controls/ros_controllers.git
-- git:
     local-name: rtt_ati_sensor
     uri: https://github.com/kuka-isir/rtt_ati_sensor
 - git:
