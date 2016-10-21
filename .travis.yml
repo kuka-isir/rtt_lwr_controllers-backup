@@ -4,7 +4,7 @@ language: generic
 
 env:
   global:
-    - UPSTREAM_WORKSPACE=https://raw.githubusercontent.com/kuka-isir/rtt_lwr_controllers/master/.travis.yml
+    - UPSTREAM_WORKSPACE=https://raw.githubusercontent.com/kuka-isir/rtt_lwr_controllers/master/rtt_lwr_controllers.rosinstall
     - ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
   matrix:
     - ROS_DISTRO="indigo"
