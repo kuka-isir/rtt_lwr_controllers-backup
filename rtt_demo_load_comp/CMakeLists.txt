@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
     rtt_ros
     cmake_modules
     kdl_conversions
+    rtt_ros_kdl_tools
 )
 
 find_package(Eigen REQUIRED)
