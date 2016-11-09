@@ -6,6 +6,7 @@ find_package(catkin REQUIRED COMPONENTS
     kuka_lwr_fri
     std_msgs
     std_srvs
+    krl_msgs
     cmake_modules
 )
 
